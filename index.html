@@ -319,7 +319,10 @@
                     if (docSnap.exists) {
                         db = docSnap.data();
                     } else {
-                        db = { schoolName: user.displayName || "New School", classes: [], exams: [] };
+                        // If database entry doesn't exist, check if user has a profile name from registration
+                        // Otherwise fallback to "New School"
+                        const initialName = user.displayName || "New School";
+                        db = { schoolName: initialName, classes: [], exams: [] };
                         await docRef.set(db);
                     }
                     updateUIOnLogin();
@@ -333,6 +336,8 @@
                 }
             } else {
                 currentUser = null;
+                // RESET DB to prevent showing previous user's data
+                db = { schoolName: "", classes: [], exams: [] };
                 appLayout.classList.add('hidden');
                 loginScreen.classList.remove('hidden');
             }
@@ -340,7 +345,7 @@
 
         // --- AUTH HANDLERS ---
         async function handleLogin(e) {
-            e.preventDefault(); // STOPS PAGE RELOAD
+            e.preventDefault();
             const email = document.getElementById('loginEmail').value;
             const pass = document.getElementById('loginPassword').value;
             const errorMsg = document.getElementById('authError');
@@ -357,7 +362,7 @@
         }
 
         async function handleRegister(e) {
-            e.preventDefault(); // STOPS PAGE RELOAD
+            e.preventDefault();
             const name = document.getElementById('regSchoolName').value;
             const email = document.getElementById('regEmail').value;
             const pass = document.getElementById('regPassword').value;
@@ -373,9 +378,21 @@
 
             try {
                 document.getElementById('loadingOverlay').classList.remove('hidden');
+                
+                // 1. Create User
                 const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
+                
+                // 2. Update Auth Profile
                 await userCredential.user.updateProfile({ displayName: name });
-                // Trigger saving new user data is handled in auth listener
+                
+                // 3. FORCE Write to Database with Correct Name IMMEDIATELY
+                // This prevents the "New School" race condition
+                db = { schoolName: name, classes: [], exams: [] };
+                await dbFirestore.collection('artifacts').doc(APP_ID).collection('users').doc(userCredential.user.uid).collection('school_data').doc('main').set(db);
+                
+                // 4. Force UI update here in case onAuthStateChanged already fired with old data
+                updateUIOnLogin();
+
             } catch (error) {
                 document.getElementById('loadingOverlay').classList.add('hidden');
                 errorMsg.textContent = "Registration Failed: " + error.message;
