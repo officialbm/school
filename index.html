@@ -180,7 +180,10 @@
         <aside class="w-64 bg-white shadow-md flex flex-col z-10">
             <div class="p-5 border-b flex items-center gap-3">
                 <div class="bg-blue-100 p-2 rounded-full text-primary"><i class="fas fa-graduation-cap"></i></div>
-                <div><h2 class="font-bold text-sm truncate w-32" id="displaySchoolName">Loading...</h2><p class="text-xs text-gray-500">Admin Panel</p></div>
+                <div class="overflow-hidden">
+                    <h2 class="font-bold text-sm truncate w-32 cursor-pointer hover:text-blue-600" id="displaySchoolName" onclick="editSchoolName()" title="Click to edit School Name">Loading...</h2>
+                    <p class="text-xs text-gray-500 flex items-center">Admin Panel <button onclick="editSchoolName()" class="ml-2 text-blue-400 hover:text-blue-600"><i class="fas fa-pencil-alt text-[10px]"></i></button></p>
+                </div>
             </div>
             <nav class="flex-1 overflow-y-auto py-4">
                 <ul class="space-y-1 px-2">
@@ -318,9 +321,13 @@
 
                     if (docSnap.exists) {
                         db = docSnap.data();
+                        // SELF-HEALING: If database says "New School" but Auth profile has real name, FIX IT.
+                        if (db.schoolName === "New School" && user.displayName && user.displayName !== "New School") {
+                            console.log("Self-healing school name...");
+                            db.schoolName = user.displayName;
+                            await docRef.update({ schoolName: user.displayName });
+                        }
                     } else {
-                        // If database entry doesn't exist, check if user has a profile name from registration
-                        // Otherwise fallback to "New School"
                         const initialName = user.displayName || "New School";
                         db = { schoolName: initialName, classes: [], exams: [] };
                         await docRef.set(db);
@@ -336,8 +343,6 @@
                 }
             } else {
                 currentUser = null;
-                // RESET DB to prevent showing previous user's data
-                db = { schoolName: "", classes: [], exams: [] };
                 appLayout.classList.add('hidden');
                 loginScreen.classList.remove('hidden');
             }
@@ -378,21 +383,14 @@
 
             try {
                 document.getElementById('loadingOverlay').classList.remove('hidden');
-                
-                // 1. Create User
                 const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
-                
-                // 2. Update Auth Profile
                 await userCredential.user.updateProfile({ displayName: name });
                 
-                // 3. FORCE Write to Database with Correct Name IMMEDIATELY
-                // This prevents the "New School" race condition
+                // FORCE WRITE IMMEDIATELY to prevent race condition
                 db = { schoolName: name, classes: [], exams: [] };
                 await dbFirestore.collection('artifacts').doc(APP_ID).collection('users').doc(userCredential.user.uid).collection('school_data').doc('main').set(db);
                 
-                // 4. Force UI update here in case onAuthStateChanged already fired with old data
                 updateUIOnLogin();
-
             } catch (error) {
                 document.getElementById('loadingOverlay').classList.add('hidden');
                 errorMsg.textContent = "Registration Failed: " + error.message;
@@ -427,6 +425,16 @@
                 tabRegister.classList.remove('text-gray-500');
                 tabLogin.classList.remove('border-b-2', 'border-blue-600', 'text-blue-600');
                 tabLogin.classList.add('text-gray-500');
+            }
+        }
+
+        // --- EDIT SCHOOL NAME FEATURE ---
+        async function editSchoolName() {
+            const newName = prompt("Edit School Name:", db.schoolName);
+            if (newName && newName.trim() !== "") {
+                db.schoolName = newName.trim();
+                updateUIOnLogin(); // Immediate UI update
+                await saveData(); // Save to DB
             }
         }
 
