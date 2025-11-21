@@ -14,6 +14,11 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    <!-- Firebase SDKs (Compat version for file:// support) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
     <script>
         tailwind.config = {
             theme: {
@@ -46,7 +51,6 @@
             box-sizing: border-box;
         }
 
-        /* Admit Card Specific Styles */
         .admit-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -65,15 +69,12 @@
             background: #fff;
         }
 
-        /* Modal Styles */
         .modal { transition: opacity 0.25s ease; }
         body.modal-active { overflow-x: hidden; overflow-y: hidden !important; }
 
-        /* Loader */
         .loader { border-top-color: #3498db; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* --- PRINT STYLES --- */
         @media print {
             @page { size: A4; margin: 0; }
             body > *:not(#printContainer) { display: none !important; }
@@ -91,30 +92,25 @@
 </head>
 <body class="text-gray-800 h-screen flex flex-col overflow-hidden">
 
-    <!-- TOAST -->
     <div id="toast" class="fixed top-5 right-5 bg-green-600 text-white px-6 py-3 rounded shadow-lg transform translate-x-full transition-transform duration-300 z-50">Action Successful</div>
 
-    <!-- LOADING OVERLAY -->
     <div id="loadingOverlay" class="fixed inset-0 z-[60] bg-white bg-opacity-90 flex flex-col items-center justify-center hidden">
         <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-16 w-16 mb-4"></div>
         <h2 class="text-center text-gray-700 text-xl font-semibold">Loading...</h2>
-        <p class="w-1/3 text-center text-gray-500">Connecting to secure database...</p>
+        <p class="w-1/3 text-center text-gray-500">Connecting to database...</p>
     </div>
 
-    <!-- EDIT STUDENT MODAL -->
+    <!-- EDIT MODAL -->
     <div id="editStudentModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
         <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50"></div>
         <div class="modal-container bg-white w-11/12 md:max-w-lg mx-auto rounded shadow-lg z-50 overflow-y-auto">
             <div class="modal-content py-4 text-left px-6">
                 <div class="flex justify-between items-center pb-3 border-b">
-                    <p class="text-2xl font-bold">Edit Student Details</p>
-                    <div class="modal-close cursor-pointer z-50" onclick="toggleModal('editStudentModal')">
-                        <i class="fas fa-times text-black"></i>
-                    </div>
+                    <p class="text-2xl font-bold">Edit Student</p>
+                    <div class="modal-close cursor-pointer z-50" onclick="toggleModal('editStudentModal')"><i class="fas fa-times text-black"></i></div>
                 </div>
                 <div class="my-5 space-y-3">
-                    <input type="hidden" id="editStuClassIdx">
-                    <input type="hidden" id="editStuIdx">
+                    <input type="hidden" id="editStuClassIdx"><input type="hidden" id="editStuIdx">
                     <div class="grid grid-cols-2 gap-3">
                         <div><label class="block text-sm font-bold mb-1">Roll No</label><input type="number" id="editStuRoll" class="w-full border p-2 rounded"></div>
                         <div><label class="block text-sm font-bold mb-1">Student ID</label><input type="text" id="editStuID" class="w-full border p-2 rounded"></div>
@@ -131,7 +127,7 @@
                     </div>
                     <div class="flex justify-end pt-4">
                         <button onclick="toggleModal('editStudentModal')" class="bg-gray-300 text-gray-800 px-4 py-2 rounded mr-2">Cancel</button>
-                        <button id="btnUpdateStudent" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Update Student</button>
+                        <button onclick="saveEditedStudent()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Update Student</button>
                     </div>
                 </div>
             </div>
@@ -145,15 +141,13 @@
                 <i class="fas fa-school text-5xl text-primary mb-3"></i>
                 <h1 class="text-2xl font-bold text-gray-700">EduTrack Portal</h1>
             </div>
-            
-            <!-- TABS -->
             <div class="flex mb-6 border-b">
-                <button id="tabLogin" class="flex-1 py-2 text-blue-600 border-b-2 border-blue-600 font-bold focus:outline-none">Sign In</button>
-                <button id="tabRegister" class="flex-1 py-2 text-gray-500 hover:text-blue-600 focus:outline-none">Register School</button>
+                <button id="tabLogin" onclick="switchTab('login')" class="flex-1 py-2 text-blue-600 border-b-2 border-blue-600 font-bold focus:outline-none">Sign In</button>
+                <button id="tabRegister" onclick="switchTab('register')" class="flex-1 py-2 text-gray-500 hover:text-blue-600 focus:outline-none">Register School</button>
             </div>
 
-            <!-- LOGIN FORM -->
-            <form id="loginForm">
+            <!-- Login Form -->
+            <form id="loginForm" onsubmit="handleLogin(event)">
                 <div class="mb-4">
                     <label class="block text-gray-700 text-sm font-bold mb-2">Email Address</label>
                     <input type="email" id="loginEmail" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
@@ -165,24 +159,12 @@
                 <button type="submit" class="w-full bg-primary text-white py-2 rounded hover:bg-blue-800 font-bold">Sign In</button>
             </form>
 
-            <!-- REGISTER FORM -->
-            <form id="registerForm" class="hidden">
-                <div class="mb-3">
-                    <label class="block text-gray-700 text-sm font-bold mb-1">School Name</label>
-                    <input type="text" id="regSchoolName" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div class="mb-3">
-                    <label class="block text-gray-700 text-sm font-bold mb-1">Email Address</label>
-                    <input type="email" id="regEmail" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div class="mb-3">
-                    <label class="block text-gray-700 text-sm font-bold mb-1">Password</label>
-                    <input type="password" id="regPassword" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-1">Confirm Password</label>
-                    <input type="password" id="regConfirmPassword" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
-                </div>
+            <!-- Register Form -->
+            <form id="registerForm" onsubmit="handleRegister(event)" class="hidden">
+                <div class="mb-3"><label class="block text-gray-700 text-sm font-bold mb-1">School Name</label><input type="text" id="regSchoolName" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
+                <div class="mb-3"><label class="block text-gray-700 text-sm font-bold mb-1">Email Address</label><input type="email" id="regEmail" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
+                <div class="mb-3"><label class="block text-gray-700 text-sm font-bold mb-1">Password</label><input type="password" id="regPassword" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
+                <div class="mb-4"><label class="block text-gray-700 text-sm font-bold mb-1">Confirm Password</label><input type="password" id="regConfirmPassword" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"></div>
                 <button type="submit" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-800 font-bold">Register School</button>
             </form>
             
@@ -190,12 +172,11 @@
         </div>
     </div>
 
-    <!-- PRINT CONTAINER -->
+    <!-- Print Area -->
     <div id="printContainer"></div>
 
-    <!-- APP LAYOUT -->
+    <!-- App Layout -->
     <div id="appLayout" class="flex h-full hidden">
-        <!-- SIDEBAR -->
         <aside class="w-64 bg-white shadow-md flex flex-col z-10">
             <div class="p-5 border-b flex items-center gap-3">
                 <div class="bg-blue-100 p-2 rounded-full text-primary"><i class="fas fa-graduation-cap"></i></div>
@@ -213,163 +194,96 @@
                 </ul>
             </nav>
             <div class="p-4 border-t">
-                <button id="btnLogout" class="w-full px-4 py-2 text-red-600 hover:bg-red-50 rounded text-sm mb-2"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
+                <button onclick="handleLogout()" class="w-full px-4 py-2 text-red-600 hover:bg-red-50 rounded text-sm mb-2"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
             </div>
         </aside>
 
-        <!-- MAIN CONTENT -->
         <main class="flex-1 bg-gray-100 overflow-y-auto p-8 relative">
-            
-            <!-- WELCOME RIBBON -->
-            <div id="welcomeRibbon" class="bg-gradient-to-r from-blue-800 to-blue-600 text-white p-4 rounded-lg shadow-md mb-6 flex items-center gap-3 hidden animate-fade-in">
+            <div id="welcomeRibbon" class="bg-gradient-to-r from-blue-800 to-blue-600 text-white p-4 rounded-lg shadow-md mb-6 flex items-center gap-3 hidden">
                 <i class="fas fa-door-open text-2xl"></i>
-                <div>
-                    <h2 class="text-xl font-bold">Welcome, <span id="ribbonSchoolName">School Name</span></h2>
-                    <p class="text-sm opacity-90">Manage your academic year efficiently.</p>
-                </div>
+                <div><h2 class="text-xl font-bold">Welcome, <span id="ribbonSchoolName">School Name</span></h2><p class="text-sm opacity-90">Manage your academic year efficiently.</p></div>
             </div>
 
-            <!-- 1. DASHBOARD -->
             <div id="dashboardSection" class="section-content">
                 <h1 class="text-2xl font-bold mb-6 text-gray-800">Dashboard</h1>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500">
-                        <div class="text-gray-500 text-sm">Total Students</div>
-                        <div class="text-3xl font-bold text-gray-800" id="dashTotalStudents">0</div>
-                    </div>
-                    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
-                        <div class="text-gray-500 text-sm">Classes</div>
-                        <div class="text-3xl font-bold text-gray-800" id="dashTotalClasses">0</div>
-                    </div>
-                    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-purple-500">
-                        <div class="text-gray-500 text-sm">Exams</div>
-                        <div class="text-3xl font-bold text-gray-800" id="dashTotalExams">0</div>
-                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500"><div class="text-gray-500 text-sm">Total Students</div><div class="text-3xl font-bold text-gray-800" id="dashTotalStudents">0</div></div>
+                    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-green-500"><div class="text-gray-500 text-sm">Classes</div><div class="text-3xl font-bold text-gray-800" id="dashTotalClasses">0</div></div>
+                    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-purple-500"><div class="text-gray-500 text-sm">Exams</div><div class="text-3xl font-bold text-gray-800" id="dashTotalExams">0</div></div>
                 </div>
             </div>
 
-            <!-- 2. STUDENT MASTER -->
+            <!-- STUDENT MASTER -->
             <div id="studentMasterSection" class="section-content hidden">
                 <h1 class="text-2xl font-bold mb-6">Student Master</h1>
                 <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
                     <h3 class="text-lg font-semibold mb-4 border-b pb-2">1. Make Classes</h3>
-                    <div class="flex gap-2 mb-4">
-                        <input type="text" id="newClassName" placeholder="Class Name (e.g., Class-X)" class="flex-1 border p-2 rounded">
-                        <button onclick="addClass()" class="bg-green-600 text-white px-4 py-2 rounded">Add Class</button>
-                    </div>
+                    <div class="flex gap-2 mb-4"><input type="text" id="newClassName" placeholder="Class Name (e.g., Class-X)" class="flex-1 border p-2 rounded"><button onclick="addClass()" class="bg-green-600 text-white px-4 py-2 rounded">Add Class</button></div>
                     <div id="classListContainer" class="flex flex-wrap gap-2"></div>
                 </div>
                 <div class="bg-white p-6 rounded-lg shadow-sm">
                     <h3 class="text-lg font-semibold mb-4 border-b pb-2">2. Entry Student Details</h3>
                     <select id="studentClassSelect" class="w-full border p-2 rounded mb-4" onchange="renderStudentList()"></select>
-                    
-                    <div class="bg-gray-50 p-4 rounded border mb-4">
-                        <h4 class="text-sm font-bold text-gray-600 mb-2">Quick Add</h4>
-                        <div class="grid grid-cols-1 md:grid-cols-5 gap-2">
-                            <input type="text" id="stuName" placeholder="Name" class="border p-2 rounded">
-                            <input type="text" id="stuFather" placeholder="Father's Name" class="border p-2 rounded">
-                            <input type="text" id="stuID" placeholder="ID" class="border p-2 rounded">
-                            <input type="number" id="stuRoll" placeholder="Roll" class="border p-2 rounded">
-                            <button onclick="addStudent()" class="bg-primary text-white px-3 py-2 rounded">Save</button>
-                        </div>
-                    </div>
-
+                    <div class="bg-gray-50 p-4 rounded border mb-4"><div class="grid grid-cols-1 md:grid-cols-5 gap-2"><input type="text" id="stuName" placeholder="Name" class="border p-2 rounded"><input type="text" id="stuFather" placeholder="Father's Name" class="border p-2 rounded"><input type="text" id="stuID" placeholder="ID" class="border p-2 rounded"><input type="number" id="stuRoll" placeholder="Roll" class="border p-2 rounded"><button onclick="addStudent()" class="bg-primary text-white px-3 py-2 rounded">Save</button></div></div>
                     <table class="w-full text-sm text-left text-gray-500"><thead class="bg-gray-100"><tr><th class="px-4 py-2">Roll</th><th class="px-4 py-2">Name</th><th class="px-4 py-2">Father</th><th class="px-4 py-2">Action</th></tr></thead><tbody id="studentTableBody"></tbody></table>
                 </div>
             </div>
 
-            <!-- 3. RESULT CONFIGURATION -->
+            <!-- CONFIG -->
             <div id="examConfigSection" class="section-content hidden">
                 <h1 class="text-2xl font-bold mb-6">Result Configuration</h1>
                 <div class="bg-white p-6 rounded-lg shadow-sm space-y-8">
-                    <div class="border-b pb-6">
-                        <h3 class="font-semibold mb-3 text-lg">1. Define Exams</h3>
-                        <div class="flex gap-2"><input type="text" id="examName" placeholder="Exam Name" class="flex-1 border p-2 rounded"><button onclick="addExam()" class="bg-primary text-white px-4 py-2 rounded">Add Exam</button></div>
-                        <ul id="examList" class="mt-4 space-y-2 text-sm"></ul>
-                    </div>
-                    <div class="border-b pb-6">
-                        <h3 class="font-semibold mb-3 text-lg">2. Define Subjects per Class</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4"><select id="configClassSelect" class="border p-2 rounded" onchange="loadClassSubjects()"></select><div><textarea id="classSubjectsInput" rows="2" class="w-full border p-2 rounded" placeholder="English, Math, Science..."></textarea><button onclick="saveClassSubjects()" class="mt-2 bg-gray-800 text-white px-4 py-2 rounded text-sm w-full">Save Subjects</button></div></div>
-                    </div>
-                    <div>
-                        <h3 class="font-semibold mb-3 text-lg">3. Configure Max Marks</h3>
-                        <button onclick="renderMaxMarksGrid()" class="bg-accent text-white px-6 py-2 rounded shadow">Load Marks Configuration</button>
-                        <div id="maxMarksGridContainer" class="mt-4 overflow-x-auto hidden"></div>
-                        <button id="saveMaxMarksBtn" onclick="saveMaxMarksConfig()" class="mt-4 bg-green-600 text-white px-6 py-2 rounded hidden">Save Marks Config</button>
-                    </div>
+                    <div class="border-b pb-6"><h3 class="font-semibold mb-3 text-lg">1. Define Exams</h3><div class="flex gap-2"><input type="text" id="examName" placeholder="Exam Name" class="flex-1 border p-2 rounded"><button onclick="addExam()" class="bg-primary text-white px-4 py-2 rounded">Add Exam</button></div><ul id="examList" class="mt-4 space-y-2 text-sm"></ul></div>
+                    <div class="border-b pb-6"><h3 class="font-semibold mb-3 text-lg">2. Define Subjects</h3><div class="grid grid-cols-1 md:grid-cols-2 gap-4"><select id="configClassSelect" class="border p-2 rounded" onchange="loadClassSubjects()"></select><div><textarea id="classSubjectsInput" rows="2" class="w-full border p-2 rounded" placeholder="English, Math, Science..."></textarea><button onclick="saveClassSubjects()" class="mt-2 bg-gray-800 text-white px-4 py-2 rounded text-sm w-full">Save Subjects</button></div></div></div>
+                    <div><h3 class="font-semibold mb-3 text-lg">3. Configure Max Marks</h3><button onclick="renderMaxMarksGrid()" class="bg-accent text-white px-6 py-2 rounded shadow">Load Marks Configuration</button><div id="maxMarksGridContainer" class="mt-4 overflow-x-auto hidden"></div><button id="saveMaxMarksBtn" onclick="saveMaxMarksConfig()" class="mt-4 bg-green-600 text-white px-6 py-2 rounded hidden">Save Marks Config</button></div>
                 </div>
             </div>
 
-            <!-- 4. MARKS ENTRY -->
+            <!-- MARKS -->
             <div id="marksEntrySection" class="section-content hidden">
                 <h1 class="text-2xl font-bold mb-6">Enter Marks</h1>
                 <div class="bg-white p-6 rounded-lg shadow-sm">
-                    <div class="flex flex-wrap gap-4 mb-6 border-b pb-4">
-                        <select id="markClassSelect" class="border p-2 rounded min-w-[200px]"></select>
-                        <select id="markExamSelect" class="border p-2 rounded min-w-[200px]"></select>
-                        <button onclick="loadMarksTable()" class="bg-accent text-white px-6 py-2 rounded">Load Sheet</button>
-                    </div>
+                    <div class="flex flex-wrap gap-4 mb-6 border-b pb-4"><select id="markClassSelect" class="border p-2 rounded min-w-[200px]"></select><select id="markExamSelect" class="border p-2 rounded min-w-[200px]"></select><button onclick="loadMarksTable()" class="bg-accent text-white px-6 py-2 rounded">Load Sheet</button></div>
                     <div id="marksTableContainer" class="overflow-x-auto"></div>
-                    <div id="saveMarksBtnContainer" class="hidden mt-4 text-right">
-                        <button onclick="saveMarks()" class="bg-green-600 text-white px-8 py-3 rounded font-bold shadow">Save Marks</button>
-                    </div>
+                    <div id="saveMarksBtnContainer" class="hidden mt-4 text-right"><button onclick="saveMarks()" class="bg-green-600 text-white px-8 py-3 rounded font-bold shadow">Save Marks</button></div>
                 </div>
             </div>
 
-            <!-- 5. REPORTS -->
+            <!-- REPORTS -->
             <div id="reportsSection" class="section-content hidden">
-                <h1 class="text-2xl font-bold mb-6">Reports & Certificates</h1>
+                <h1 class="text-2xl font-bold mb-6">Reports</h1>
                 <div class="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-wrap gap-4 items-center">
                     <div class="flex-1"><label class="block text-sm font-bold text-gray-700 mb-1">Select Class for Bulk Generation</label><select id="reportClassSelect" class="w-full border p-2 rounded"></select></div>
-                    <div class="flex gap-2 mt-6">
-                        <button onclick="generatePreview('report')" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-800 transition shadow-md"><i class="fas fa-layer-group"></i> Generate All Progress Cards</button>
-                        <button onclick="generatePreview('certificate')" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-800 transition shadow-md"><i class="fas fa-certificate"></i> Generate All Certificates</button>
-                        <button onclick="window.print()" class="bg-gray-800 text-white px-6 py-2 rounded hover:bg-black transition shadow-md"><i class="fas fa-print"></i> Print / Save PDF</button>
-                    </div>
+                    <div class="flex gap-2 mt-6"><button onclick="generatePreview('report')" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-800 transition shadow-md"><i class="fas fa-layer-group"></i> Generate All Progress Cards</button><button onclick="generatePreview('certificate')" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-800 transition shadow-md"><i class="fas fa-certificate"></i> Generate All Certificates</button><button onclick="window.print()" class="bg-gray-800 text-white px-6 py-2 rounded hover:bg-black transition shadow-md"><i class="fas fa-print"></i> Print / Save PDF</button></div>
                 </div>
-                <div class="flex justify-center bg-gray-200 p-4 overflow-auto border rounded-lg h-[500px]">
-                    <div id="previewArea" class="w-full flex flex-col items-center space-y-8"><div class="text-center text-gray-400 p-10 bg-white shadow w-full max-w-md rounded mt-10">Select a class and click Generate.</div></div>
-                </div>
+                <div class="flex justify-center bg-gray-200 p-4 overflow-auto border rounded-lg h-[500px]"><div id="previewArea" class="w-full flex flex-col items-center space-y-8"><div class="text-center text-gray-400 p-10 bg-white shadow w-full max-w-md rounded mt-10">Select a class and click Generate.</div></div></div>
             </div>
 
-            <!-- 6. CUMULATIVE RANKING -->
+            <!-- RANKING -->
             <div id="progressSection" class="section-content hidden">
                 <h1 class="text-2xl font-bold mb-6">Cumulative Rank List</h1>
                 <div class="bg-white p-6 rounded-lg shadow-sm">
-                    <div class="flex gap-4 mb-6 items-end">
-                        <div class="flex-1"><label class="block text-sm font-bold text-gray-700 mb-1">Select Class</label><select id="rankClassSelect" class="border p-2 rounded w-full"></select></div>
-                        <button onclick="generateRankList()" class="bg-green-600 text-white px-8 py-2 rounded hover:bg-green-700 mb-[1px]"><i class="fas fa-list-ol"></i> Generate Cumulative Rank List</button>
-                    </div>
+                    <div class="flex gap-4 mb-6 items-end"><div class="flex-1"><label class="block text-sm font-bold text-gray-700 mb-1">Select Class</label><select id="rankClassSelect" class="border p-2 rounded w-full"></select></div><button onclick="generateRankList()" class="bg-green-600 text-white px-8 py-2 rounded hover:bg-green-700 mb-[1px]"><i class="fas fa-list-ol"></i> Generate Cumulative Rank List</button></div>
                     <div id="rankListPreview" class="border p-2 bg-gray-50 text-xs min-h-[100px] mb-4 hidden"></div>
                     <button id="printRankBtn" onclick="window.print()" class="w-full bg-gray-800 text-white py-2 rounded hidden"><i class="fas fa-print"></i> Print Rank List</button>
                 </div>
             </div>
 
-            <!-- 7. ADMIT CARD GENERATION -->
+            <!-- ADMITS -->
             <div id="admitCardSection" class="section-content hidden">
                 <h1 class="text-2xl font-bold mb-6">Generate Admit Cards</h1>
                 <div class="bg-white p-6 rounded-lg shadow-sm">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Select Class</label><select id="admitClassSelect" class="w-full border p-2 rounded"></select></div>
-                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Name of Examination</label><input type="text" id="admitExamName" placeholder="e.g., Annual Exam 2025" class="w-full border p-2 rounded"></div>
-                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Date of Commencement</label><input type="date" id="admitDate" class="w-full border p-2 rounded"></div>
-                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"><div><label class="block text-sm font-medium text-gray-700 mb-1">Select Class</label><select id="admitClassSelect" class="w-full border p-2 rounded"></select></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Name of Examination</label><input type="text" id="admitExamName" placeholder="e.g., Annual Exam 2025" class="w-full border p-2 rounded"></div><div><label class="block text-sm font-medium text-gray-700 mb-1">Date of Commencement</label><input type="date" id="admitDate" class="w-full border p-2 rounded"></div></div>
                     <div class="flex justify-end"><button onclick="generateAdmitCards()" class="bg-blue-800 text-white px-8 py-3 rounded font-bold shadow hover:bg-blue-900"><i class="fas fa-id-card"></i> Generate & Preview</button></div>
                 </div>
                 <div class="mt-8 flex justify-center bg-gray-200 p-4 overflow-auto hidden" id="admitPreviewWrapper"><div id="admitPreviewArea"></div></div>
                 <div class="text-center mt-4 hidden" id="admitPrintBtn"><button onclick="window.print()" class="bg-gray-800 text-white px-6 py-3 rounded shadow hover:bg-black"><i class="fas fa-print"></i> Print Admit Cards</button></div>
             </div>
-
         </main>
     </div>
 
-    <script type="module">
-        // --- FIREBASE CONFIGURATION ---
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // *** UPDATED FIREBASE CONFIG ***
+    <script>
+        // FIREBASE CONFIG (YOUR CREDENTIALS)
         const firebaseConfig = {
             apiKey: "AIzaSyDJjHUMwXUExy5yzIjLwKIeF-HCJ0lJvuk",
             authDomain: "school-7e0f2.firebaseapp.com",
@@ -379,70 +293,54 @@
             appId: "1:1041273059114:web:e1de6e0c46857228a8d053"
         };
 
-        // Init Firebase
-        let app, auth, dbFirestore;
-        try {
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            dbFirestore = getFirestore(app);
-        } catch (e) {
-            console.error("Firebase Init Error:", e);
-            alert("Error initializing Firebase. Check console for details.");
-        }
+        // Init Firebase (Compat Mode)
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const dbFirestore = firebase.firestore();
+        const APP_ID = 'school_crm_v1';
 
-        const APP_ID = 'school_crm_v1'; // Stable ID for your school data
-
-        // --- GLOBAL STATE ---
+        // Global State
         let db = { schoolName: "", classes: [], exams: [] };
         let currentUser = null;
 
-        // --- AUTH STATE OBSERVER ---
-        if (auth) {
-            onAuthStateChanged(auth, async (user) => {
-                const loading = document.getElementById('loadingOverlay');
-                const loginScreen = document.getElementById('loginScreen');
-                const appLayout = document.getElementById('appLayout');
+        // --- AUTH LISTENER ---
+        auth.onAuthStateChanged(async (user) => {
+            const loading = document.getElementById('loadingOverlay');
+            const loginScreen = document.getElementById('loginScreen');
+            const appLayout = document.getElementById('appLayout');
 
-                if (user) {
-                    currentUser = user;
-                    loading.classList.remove('hidden');
-                    
-                    // Fetch School Data
-                    try {
-                        const docRef = doc(dbFirestore, 'artifacts', APP_ID, 'users', user.uid, 'school_data', 'main');
-                        const docSnap = await getDoc(docRef);
+            if (user) {
+                currentUser = user;
+                loading.classList.remove('hidden');
+                try {
+                    const docRef = dbFirestore.collection('artifacts').doc(APP_ID).collection('users').doc(user.uid).collection('school_data').doc('main');
+                    const docSnap = await docRef.get();
 
-                        if (docSnap.exists()) {
-                            db = docSnap.data();
-                        } else {
-                            // Initialize new user data
-                            db = { schoolName: user.displayName || "New School", classes: [], exams: [] };
-                            await setDoc(docRef, db);
-                        }
-                        
-                        updateUIOnLogin();
-                        loginScreen.classList.add('hidden');
-                        appLayout.classList.remove('hidden');
-                    } catch (error) {
-                        console.error("Error fetching data:", error);
-                        // Even if fetch fails, show app layout but empty
-                        loginScreen.classList.add('hidden');
-                        appLayout.classList.remove('hidden');
-                        alert("Could not load previous data. Using offline/empty state. Check your internet or permissions.");
-                    } finally {
-                        loading.classList.add('hidden');
+                    if (docSnap.exists) {
+                        db = docSnap.data();
+                    } else {
+                        db = { schoolName: user.displayName || "New School", classes: [], exams: [] };
+                        await docRef.set(db);
                     }
-                } else {
-                    currentUser = null;
-                    appLayout.classList.add('hidden');
-                    loginScreen.classList.remove('hidden');
+                    updateUIOnLogin();
+                    loginScreen.classList.add('hidden');
+                    appLayout.classList.remove('hidden');
+                } catch (error) {
+                    console.error(error);
+                    alert("Error loading data.");
+                } finally {
+                    loading.classList.add('hidden');
                 }
-            });
-        }
+            } else {
+                currentUser = null;
+                appLayout.classList.add('hidden');
+                loginScreen.classList.remove('hidden');
+            }
+        });
 
-        // --- UI LOGIC FOR AUTH ---
-        window.handleLogin = async (e) => {
-            e.preventDefault();
+        // --- AUTH HANDLERS ---
+        async function handleLogin(e) {
+            e.preventDefault(); // STOPS PAGE RELOAD
             const email = document.getElementById('loginEmail').value;
             const pass = document.getElementById('loginPassword').value;
             const errorMsg = document.getElementById('authError');
@@ -450,86 +348,83 @@
             
             try {
                 document.getElementById('loadingOverlay').classList.remove('hidden');
-                await signInWithEmailAndPassword(auth, email, pass);
+                await auth.signInWithEmailAndPassword(email, pass);
             } catch (error) {
                 document.getElementById('loadingOverlay').classList.add('hidden');
-                errorMsg.textContent = "Login Failed: " + error.message.replace('Firebase:', '').trim();
+                errorMsg.textContent = "Login Failed: " + error.message;
                 errorMsg.classList.remove('hidden');
             }
-        };
-
-        // Expose to window for HTML button access
-        const regForm = document.getElementById('registerForm');
-        if(regForm) {
-            regForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const name = document.getElementById('regSchoolName').value;
-                const email = document.getElementById('regEmail').value;
-                const pass = document.getElementById('regPassword').value;
-                const confirm = document.getElementById('regConfirmPassword').value;
-                const errorMsg = document.getElementById('authError');
-                errorMsg.classList.add('hidden');
-
-                if (pass !== confirm) {
-                    errorMsg.textContent = "Passwords do not match!";
-                    errorMsg.classList.remove('hidden');
-                    return;
-                }
-
-                try {
-                    document.getElementById('loadingOverlay').classList.remove('hidden');
-                    const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
-                    await updateProfile(userCredential.user, { displayName: name });
-                    
-                    // Initial DB Save happens in onAuthStateChanged
-                } catch (error) {
-                    document.getElementById('loadingOverlay').classList.add('hidden');
-                    errorMsg.textContent = "Registration Failed: " + error.message.replace('Firebase:', '').trim();
-                    errorMsg.classList.remove('hidden');
-                }
-            });
         }
 
-        document.getElementById('btnLogout').addEventListener('click', () => {
-            signOut(auth);
-        });
+        async function handleRegister(e) {
+            e.preventDefault(); // STOPS PAGE RELOAD
+            const name = document.getElementById('regSchoolName').value;
+            const email = document.getElementById('regEmail').value;
+            const pass = document.getElementById('regPassword').value;
+            const confirm = document.getElementById('regConfirmPassword').value;
+            const errorMsg = document.getElementById('authError');
+            errorMsg.classList.add('hidden');
 
-        // Toggle Login/Register
-        document.getElementById('tabLogin').addEventListener('click', () => {
-            document.getElementById('loginForm').classList.remove('hidden');
-            document.getElementById('registerForm').classList.add('hidden');
-            document.getElementById('tabLogin').classList.add('border-b-2', 'border-blue-600', 'text-blue-600');
-            document.getElementById('tabLogin').classList.remove('text-gray-500');
-            document.getElementById('tabRegister').classList.remove('border-b-2', 'border-blue-600', 'text-blue-600');
-            document.getElementById('tabRegister').classList.add('text-gray-500');
-            document.getElementById('authError').classList.add('hidden');
-        });
+            if (pass !== confirm) {
+                errorMsg.textContent = "Passwords do not match!";
+                errorMsg.classList.remove('hidden');
+                return;
+            }
 
-        document.getElementById('tabRegister').addEventListener('click', () => {
-            document.getElementById('loginForm').classList.add('hidden');
-            document.getElementById('registerForm').classList.remove('hidden');
-            document.getElementById('tabRegister').classList.add('border-b-2', 'border-blue-600', 'text-blue-600');
-            document.getElementById('tabRegister').classList.remove('text-gray-500');
-            document.getElementById('tabLogin').classList.remove('border-b-2', 'border-blue-600', 'text-blue-600');
-            document.getElementById('tabLogin').classList.add('text-gray-500');
-            document.getElementById('authError').classList.add('hidden');
-        });
+            try {
+                document.getElementById('loadingOverlay').classList.remove('hidden');
+                const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
+                await userCredential.user.updateProfile({ displayName: name });
+                // Trigger saving new user data is handled in auth listener
+            } catch (error) {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                errorMsg.textContent = "Registration Failed: " + error.message;
+                errorMsg.classList.remove('hidden');
+            }
+        }
 
-        // --- DATA PERSISTENCE (FIRESTORE) ---
-        window.saveData = async () => {
+        function handleLogout() {
+            auth.signOut();
+        }
+
+        function switchTab(tab) {
+            const loginForm = document.getElementById('loginForm');
+            const regForm = document.getElementById('registerForm');
+            const tabLogin = document.getElementById('tabLogin');
+            const tabRegister = document.getElementById('tabRegister');
+            const errorMsg = document.getElementById('authError');
+            
+            errorMsg.classList.add('hidden');
+
+            if (tab === 'login') {
+                loginForm.classList.remove('hidden');
+                regForm.classList.add('hidden');
+                tabLogin.classList.add('border-b-2', 'border-blue-600', 'text-blue-600');
+                tabLogin.classList.remove('text-gray-500');
+                tabRegister.classList.remove('border-b-2', 'border-blue-600', 'text-blue-600');
+                tabRegister.classList.add('text-gray-500');
+            } else {
+                loginForm.classList.add('hidden');
+                regForm.classList.remove('hidden');
+                tabRegister.classList.add('border-b-2', 'border-blue-600', 'text-blue-600');
+                tabRegister.classList.remove('text-gray-500');
+                tabLogin.classList.remove('border-b-2', 'border-blue-600', 'text-blue-600');
+                tabLogin.classList.add('text-gray-500');
+            }
+        }
+
+        // --- DATA LOGIC ---
+        async function saveData() {
             if (!currentUser) return;
             try {
-                const docRef = doc(dbFirestore, 'artifacts', APP_ID, 'users', currentUser.uid, 'school_data', 'main');
-                await setDoc(docRef, db);
+                await dbFirestore.collection('artifacts').doc(APP_ID).collection('users').doc(currentUser.uid).collection('school_data').doc('main').set(db);
                 showToast();
                 updateStats();
             } catch (e) {
                 console.error("Save Error:", e);
-                alert("Failed to save data to cloud. Check console.");
             }
-        };
+        }
 
-        // --- UTILS ---
         function showToast() {
             const t = document.getElementById('toast');
             t.classList.remove('translate-x-full');
@@ -546,23 +441,20 @@
             populateDropdowns();
         }
 
-        // --- BIND WINDOW FUNCTIONS (Because Module Scope is Private) ---
-        // We attach necessary functions to window so inline HTML onclicks work
-        
-        // Navigation
-        window.showSection = (id) => {
+        // --- APP FUNCTIONS ---
+        function showSection(id) {
             document.querySelectorAll('.section-content').forEach(e => e.classList.add('hidden'));
             document.getElementById(id).classList.remove('hidden');
-        };
+        }
 
-        window.updateStats = () => {
+        function updateStats() {
             document.getElementById('dashTotalStudents').textContent = db.classes.reduce((a,c)=>a+c.students.length,0);
             document.getElementById('dashTotalClasses').textContent = db.classes.length;
             document.getElementById('dashTotalExams').textContent = db.exams.length;
-        };
+        }
 
         // Classes
-        window.addClass = () => {
+        function addClass() {
             const name = document.getElementById('newClassName').value.trim();
             if(!name) return;
             db.classes.push({ name, students: [], subjects: [], marksConfig: {} });
@@ -570,16 +462,15 @@
             saveData();
             renderTags();
             populateDropdowns();
-        };
-
-        window.renderTags = () => {
+        }
+        function renderTags() {
             document.getElementById('classListContainer').innerHTML = db.classes.map(c => 
                 `<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm border border-blue-200">${c.name}</span>`
             ).join('');
-        };
+        }
 
         // Students
-        window.addStudent = () => {
+        function addStudent() {
             const clsIdx = document.getElementById('studentClassSelect').selectedIndex - 1;
             if(clsIdx < 0) return alert("Select Class");
             const name = document.getElementById('stuName').value;
@@ -596,9 +487,9 @@
             ['stuName','stuFather','stuID','stuRoll'].forEach(id=>document.getElementById(id).value='');
             saveData();
             renderStudentList();
-        };
-
-        window.renderStudentList = () => {
+        }
+        
+        function renderStudentList() {
             const clsIdx = document.getElementById('studentClassSelect').selectedIndex - 1;
             const tbody = document.getElementById('studentTableBody');
             if(clsIdx < 0) return tbody.innerHTML = '';
@@ -613,12 +504,11 @@
                     </td>
                 </tr>`
             ).join('');
-        };
-
-        window.delStu = (ci, si) => { if(confirm("Delete?")) { db.classes[ci].students.splice(si,1); saveData(); renderStudentList(); } };
+        }
+        function delStu(ci, si) { if(confirm("Delete?")) { db.classes[ci].students.splice(si,1); saveData(); renderStudentList(); } }
 
         // Edit Student
-        window.editStudent = (ci, si) => {
+        function editStudent(ci, si) {
             const s = db.classes[ci].students[si];
             document.getElementById('editStuClassIdx').value = ci;
             document.getElementById('editStuIdx').value = si;
@@ -631,9 +521,9 @@
             document.getElementById('editStuPhone').value = s.extra.phone || '';
             document.getElementById('editStuAddress').value = s.extra.address || '';
             toggleModal('editStudentModal');
-        };
+        }
 
-        window.saveEditedStudent = () => {
+        function saveEditedStudent() {
             const ci = document.getElementById('editStuClassIdx').value;
             const si = document.getElementById('editStuIdx').value;
             if(ci === '' || si === '') return;
@@ -651,19 +541,17 @@
             saveData();
             toggleModal('editStudentModal');
             renderStudentList();
-        };
+        }
 
-        document.getElementById('btnUpdateStudent').onclick = window.saveEditedStudent;
-
-        window.toggleModal = (id) => {
+        function toggleModal(id) {
             const modal = document.getElementById(id);
             modal.classList.toggle('opacity-0');
             modal.classList.toggle('pointer-events-none');
             document.body.classList.toggle('modal-active');
-        };
+        }
 
         // Exams
-        window.addExam = () => {
+        function addExam() {
             const name = document.getElementById('examName').value;
             if(!name) return;
             db.exams.push({ name }); 
@@ -671,29 +559,29 @@
             saveData();
             renderExams();
             populateDropdowns();
-        };
-        window.renderExams = () => {
+        }
+        function renderExams() {
             document.getElementById('examList').innerHTML = db.exams.map((e,i) => 
                 `<li class="flex justify-between bg-gray-50 p-2 border rounded"><span>${e.name}</span><button class="text-red-500" onclick="delExam(${i})">x</button></li>`
             ).join('');
-        };
-        window.delExam = (i) => { db.exams.splice(i,1); saveData(); renderExams(); populateDropdowns(); };
+        }
+        function delExam(i) { db.exams.splice(i,1); saveData(); renderExams(); populateDropdowns(); }
 
         // Subjects & Marks Config
-        window.loadClassSubjects = () => {
+        function loadClassSubjects() {
             const i = document.getElementById('configClassSelect').selectedIndex - 1;
             if(i<0) return;
             document.getElementById('classSubjectsInput').value = (db.classes[i].subjects || []).join(', ');
-        };
-        window.saveClassSubjects = () => {
+        }
+        function saveClassSubjects() {
             const i = document.getElementById('configClassSelect').selectedIndex - 1;
             if(i<0) return alert("Select Class");
             const raw = document.getElementById('classSubjectsInput').value;
             db.classes[i].subjects = raw.split(',').map(s=>s.trim()).filter(s=>s);
             saveData();
-        };
+        }
 
-        window.renderMaxMarksGrid = () => {
+        function renderMaxMarksGrid() {
             const clsIdx = document.getElementById('configClassSelect').selectedIndex - 1;
             if(clsIdx < 0) return alert("Please Select a Class in Step 2 first.");
             const cls = db.classes[clsIdx];
@@ -713,9 +601,9 @@
             document.getElementById('maxMarksGridContainer').innerHTML = html;
             document.getElementById('maxMarksGridContainer').classList.remove('hidden');
             document.getElementById('saveMaxMarksBtn').classList.remove('hidden');
-        };
+        }
 
-        window.saveMaxMarksConfig = () => {
+        function saveMaxMarksConfig() {
             const clsIdx = document.getElementById('configClassSelect').selectedIndex - 1;
             const inputs = document.querySelectorAll('.config-max-input');
             if(!db.classes[clsIdx].marksConfig) db.classes[clsIdx].marksConfig = {};
@@ -726,10 +614,10 @@
                 db.classes[clsIdx].marksConfig[ex][sub] = parseInt(inp.value) || 0;
             });
             saveData();
-        };
+        }
 
         // Marks Entry
-        window.loadMarksTable = () => {
+        function loadMarksTable() {
             const ci = document.getElementById('markClassSelect').selectedIndex - 1;
             const ei = document.getElementById('markExamSelect').selectedIndex - 1;
             if(ci<0 || ei<0) return alert("Select Class & Exam");
@@ -754,9 +642,9 @@
             html += `</tbody></table>`;
             document.getElementById('marksTableContainer').innerHTML = html;
             document.getElementById('saveMarksBtnContainer').classList.remove('hidden');
-        };
+        }
 
-        window.saveMarks = () => {
+        function saveMarks() {
             const ci = document.getElementById('markClassSelect').selectedIndex - 1;
             const ei = document.getElementById('markExamSelect').selectedIndex - 1;
             const examName = db.exams[ei].name;
@@ -767,10 +655,10 @@
                 if(inp.value !== '') db.classes[ci].students[si].marks[examName][sub] = parseFloat(inp.value);
             });
             saveData();
-        };
+        }
 
         // Reports
-        window.populateDropdowns = () => {
+        function populateDropdowns() {
             const cOpt = `<option value="">-- Select --</option>` + db.classes.map((c,i)=>`<option value="${i}">${c.name}</option>`).join('');
             ['studentClassSelect','markClassSelect','reportClassSelect','configClassSelect', 'admitClassSelect', 'rankClassSelect'].forEach(id => {
                 const el = document.getElementById(id);
@@ -778,17 +666,15 @@
             });
             const eOpt = `<option value="">-- Select --</option>` + db.exams.map((e,i)=>`<option value="${i}">${e.name}</option>`).join('');
             document.getElementById('markExamSelect').innerHTML = eOpt;
-        };
+        }
 
-        window.loadReportStudents = () => {};
-
-        window.getGrade = (pct) => {
+        function getGrade(pct) {
             if(pct>=90) return 'A+'; if(pct>=80) return 'A'; if(pct>=70) return 'B+';
             if(pct>=60) return 'B'; if(pct>=50) return 'C'; if(pct>=40) return 'D'; return 'F';
-        };
+        }
 
         // Ranking
-        window.generateRankList = () => {
+        function generateRankList() {
             const ci = document.getElementById('rankClassSelect').selectedIndex - 1;
             if(ci < 0) return alert("Select Class");
             const cls = db.classes[ci];
@@ -819,10 +705,10 @@
             document.getElementById('rankListPreview').classList.remove('hidden');
             document.getElementById('printContainer').innerHTML = html;
             document.getElementById('printRankBtn').classList.remove('hidden');
-        };
+        }
 
         // Admit Cards
-        window.generateAdmitCards = () => {
+        function generateAdmitCards() {
             const ci = document.getElementById('admitClassSelect').selectedIndex - 1;
             const examName = document.getElementById('admitExamName').value;
             const date = document.getElementById('admitDate').value;
@@ -844,10 +730,10 @@
             document.getElementById('printContainer').innerHTML = html; 
             document.getElementById('admitPreviewWrapper').classList.remove('hidden');
             document.getElementById('admitPrintBtn').classList.remove('hidden');
-        };
+        }
 
         // Bulk Report
-        window.generatePreview = (type) => {
+        function generatePreview(type) {
             const ci = document.getElementById('reportClassSelect').selectedIndex - 1;
             if(ci < 0) return alert("Please Select a Class.");
             const cls = db.classes[ci];
