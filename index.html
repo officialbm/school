@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EduTrack - School Management System</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#1e40af',
+                        secondary: '#3b82f6',
+                        accent: '#f59e0b',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+
+        .a4-paper {
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            margin: 0 auto 20px auto;
+            padding: 10mm;
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        /* Admit Card Specific Styles */
+        .admit-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 10mm;
+            height: 100%;
+        }
+
+        .admit-card {
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            background: #fff;
+        }
+
+        /* Modal Styles */
+        .modal { transition: opacity 0.25s ease; }
+        body.modal-active { overflow-x: hidden; overflow-y: hidden !important; }
+
+        /* Loader */
+        .loader { border-top-color: #3498db; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* --- PRINT STYLES --- */
+        @media print {
+            @page { size: A4; margin: 0; }
+            body > *:not(#printContainer) { display: none !important; }
+            #printContainer { display: block !important; }
+            #printContainer .a4-paper {
+                width: 100%; height: 100vh; box-shadow: none; margin: 0; padding: 10mm;
+                page-break-after: always;
+            }
+            #printContainer .a4-paper:last-child { page-break-after: auto; }
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+        }
+        
+        #printContainer { display: none; }
+    </style>
+</head>
+<body class="text-gray-800 h-screen flex flex-col overflow-hidden">
+
+    <!-- TOAST -->
+    <div id="toast" class="fixed top-5 right-5 bg-green-600 text-white px-6 py-3 rounded shadow-lg transform translate-x-full transition-transform duration-300 z-50">Action Successful</div>
+
+    <!-- LOADING OVERLAY -->
+    <div id="loadingOverlay" class="fixed inset-0 z-[60] bg-white bg-opacity-90 flex flex-col items-center justify-center hidden">
+        <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-16 w-16 mb-4"></div>
+        <h2 class="text-center text-gray-700 text-xl font-semibold">Loading...</h2>
+        <p class="w-1/3 text-center text-gray-500">Connecting to secure database...</p>
+    </div>
+
+    <!-- EDIT STUDENT MODAL -->
+    <div id="editStudentModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50"></div>
+        <div class="modal-container bg-white w-11/12 md:max-w-lg mx-auto rounded shadow-lg z-50 overflow-y-auto">
+            <div class="modal-content py-4 text-left px-6">
+                <div class="flex justify-between items-center pb-3 border-b">
+                    <p class="text-2xl font-bold">Edit Student Details</p>
+                    <div class="modal-close cursor-pointer z-50" onclick="toggleModal('editStudentModal')">
+                        <i class="fas fa-times text-black"></i>
+                    </div>
+                </div>
+                <div class="my-5 space-y-3">
+                    <input type="hidden" id="editStuClassIdx">
+                    <input type="hidden" id="editStuIdx">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div><label class="block text-sm font-bold mb-1">Roll No</label><input type="number" id="editStuRoll" class="w-full border p-2 rounded"></div>
+                        <div><label class="block text-sm font-bold mb-1">Student ID</label><input type="text" id="editStuID" class="w-full border p-2 rounded"></div>
+                    </div>
+                    <div><label class="block text-sm font-bold mb-1">Student Name</label><input type="text" id="editStuName" class="w-full border p-2 rounded"></div>
+                    <div><label class="block text-sm font-bold mb-1">Father's Name</label><input type="text" id="editStuFather" class="w-full border p-2 rounded"></div>
+                    <div class="border-t pt-3 mt-3">
+                        <h4 class="font-semibold text-gray-600 mb-2">Extra Details</h4>
+                        <div class="grid grid-cols-2 gap-3 mb-3">
+                            <div><label class="block text-xs text-gray-500 mb-1">Date of Birth</label><input type="date" id="editStuDOB" class="w-full border p-2 rounded"></div>
+                            <div><label class="block text-xs text-gray-500 mb-1">Contact No</label><input type="text" id="editStuPhone" class="w-full border p-2 rounded"></div>
+                        </div>
+                        <div><label class="block text-xs text-gray-500 mb-1">Address</label><textarea id="editStuAddress" rows="2" class="w-full border p-2 rounded"></textarea></div>
+                    </div>
+                    <div class="flex justify-end pt-4">
+                        <button onclick="toggleModal('editStudentModal')" class="bg-gray-300 text-gray-800 px-4 py-2 rounded mr-2">Cancel</button>
+                        <button id="btnUpdateStudent" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Update Student</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen" class="fixed inset-0 z-40 bg-gradient-to-br from-blue-900 to-blue-600 flex items-center justify-center">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-96 max-h-[90vh] overflow-y-auto">
+            <div class="text-center mb-6">
+                <i class="fas fa-school text-5xl text-primary mb-3"></i>
+                <h1 class="text-2xl font-bold text-gray-700">EduTrack Portal</h1>
+            </div>
+            
+            <!-- TABS -->
+            <div class="flex mb-6 border-b">
+                <button id="tabLogin" class="flex-1 py-2 text-blue-600 border-b-2 border-blue-600 font-bold focus:outline-none">Sign In</button>
+                <button id="tabRegister" class="flex-1 py-2 text-gray-500 hover:text-blue-600 focus:outline-none">Register School</button>
+            </div>
+
+            <!-- LOGIN FORM -->
+            <form id="loginForm">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Email Address</label>
+                    <input type="email" id="loginEmail" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Password</label>
+                    <input type="password" id="loginPassword" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <button type="submit" class="w-full bg-primary text-white py-2 rounded hover:bg-blue-800 font-bold">Sign In</button>
+            </form>
+
+            <!-- REGISTER FORM -->
+            <form id="registerForm" class="hidden">
+                <div class="mb-3">
+                    <label class="block text-gray-700 text-sm font-bold mb-1">School Name</label>
+                    <input type="text" id="regSchoolName" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-gray-700 text-sm font-bold mb-1">Email Address</label>
+                    <input type="email" id="regEmail" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="mb-3">
+                    <label class="block text-gray-700 text-sm font-bold mb-1">Password</label>
+                    <input type="password" id="regPassword" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-1">Confirm Password</label>
+                    <input type="password" id="regConfirmPassword" required class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <button type="submit" class="w-full bg-green-600 text-white py-2 rounded hover:bg-green-800 font-bold">Register School</button>
+            </form>
+            
+            <div id="authError" class="mt-4 text-center text-red-500 text-sm hidden bg-red-50 p-2 rounded border border-red-200"></div>
+        </div>
+    </div>
+
+    <!-- PRINT CONTAINER -->
+    <div id="printContainer"></div>
+
+    <!-- APP LAYOUT -->
+    <div id="appLayout" class="flex h-full hidden">
+        <!-- SIDEBAR -->
+        <aside class="w-64 bg-white shadow-md flex flex-col z-10">
+            <div class="p-5 border-b flex items-center gap-3">
+                <div class="bg-blue-100 p-2 rounded-full text-primary"><i class="fas fa-graduation-cap"></i></div>
+                <div><h2 class="font-bold text-sm truncate w-32" id="displaySchoolName">Loading...</h2><p class="text-xs text-gray-500">Admin Panel</p></div>
+            </div>
+            <nav class="flex-1 overflow-y-auto py-4">
+                <ul class="space-y-1 px-2">
+                    <li><button onclick="showSection('dashboardSection')" class="nav-btn w-full text-left px-4 py-3 rounded hover:bg-blue-50 text-gray-600"><i class="fas fa-th-large w-5"></i> Dashboard</button></li>
+                    <li><button onclick="showSection('studentMasterSection')" class="nav-btn w-full text-left px-4 py-3 rounded hover:bg-blue-50 text-gray-600"><i class="fas fa-users w-5"></i> Student Master</button></li>
+                    <li><button onclick="showSection('examConfigSection')" class="nav-btn w-full text-left px-4 py-3 rounded hover:bg-blue-50 text-gray-600"><i class="fas fa-cog w-5"></i> Result Config</button></li>
+                    <li><button onclick="showSection('marksEntrySection')" class="nav-btn w-full text-left px-4 py-3 rounded hover:bg-blue-50 text-gray-600"><i class="fas fa-edit w-5"></i> Enter Marks</button></li>
+                    <li><button onclick="showSection('reportsSection')" class="nav-btn w-full text-left px-4 py-3 rounded hover:bg-blue-50 text-gray-600"><i class="fas fa-file-alt w-5"></i> Progress Card</button></li>
+                    <li><button onclick="showSection('progressSection')" class="nav-btn w-full text-left px-4 py-3 rounded hover:bg-blue-50 text-gray-600"><i class="fas fa-list-ol w-5"></i> Ranking List</button></li>
+                    <li><button onclick="showSection('admitCardSection')" class="nav-btn w-full text-left px-4 py-3 rounded hover:bg-blue-50 text-gray-600"><i class="fas fa-id-card w-5"></i> Generate Admit Cards</button></li>
+                </ul>
+            </nav>
+            <div class="p-4 border-t">
+                <button id="btnLogout" class="w-full px-4 py-2 text-red-600 hover:bg-red-50 rounded text-sm mb-2"><i class="fas fa-sign-out-alt"></i> Sign Out</button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 bg-gray-100 overflow-y-auto p-8 relative">
+            
+            <!-- WELCOME RIBBON -->
+            <div id="welcomeRibbon" class="bg-gradient-to-r from-blue-800 to-blue-600 text-white p-4 rounded-lg shadow-md mb-6 flex items-center gap-3 hidden animate-fade-in">
+                <i class="fas fa-door-open text-2xl"></i>
+                <div>
+                    <h2 class="text-xl font-bold">Welcome, <span id="ribbonSchoolName">School Name</span></h2>
+                    <p class="text-sm opacity-90">Manage your academic year efficiently.</p>
+                </div>
+            </div>
+
+            <!-- 1. DASHBOARD -->
+            <div id="dashboardSection" class="section-content">
+                <h1 class="text-2xl font-bold mb-6 text-gray-800">Dashboard</h1>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500">
+                        <div class="text-gray-500 text-sm">Total Students</div>
+                        <div class="text-3xl font-bold text-gray-800" id="dashTotalStudents">0</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-green-500">
+                        <div class="text-gray-500 text-sm">Classes</div>
+                        <div class="text-3xl font-bold text-gray-800" id="dashTotalClasses">0</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow border-l-4 border-purple-500">
+                        <div class="text-gray-500 text-sm">Exams</div>
+                        <div class="text-3xl font-bold text-gray-800" id="dashTotalExams">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. STUDENT MASTER -->
+            <div id="studentMasterSection" class="section-content hidden">
+                <h1 class="text-2xl font-bold mb-6">Student Master</h1>
+                <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
+                    <h3 class="text-lg font-semibold mb-4 border-b pb-2">1. Make Classes</h3>
+                    <div class="flex gap-2 mb-4">
+                        <input type="text" id="newClassName" placeholder="Class Name (e.g., Class-X)" class="flex-1 border p-2 rounded">
+                        <button onclick="addClass()" class="bg-green-600 text-white px-4 py-2 rounded">Add Class</button>
+                    </div>
+                    <div id="classListContainer" class="flex flex-wrap gap-2"></div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <h3 class="text-lg font-semibold mb-4 border-b pb-2">2. Entry Student Details</h3>
+                    <select id="studentClassSelect" class="w-full border p-2 rounded mb-4" onchange="renderStudentList()"></select>
+                    
+                    <div class="bg-gray-50 p-4 rounded border mb-4">
+                        <h4 class="text-sm font-bold text-gray-600 mb-2">Quick Add</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-5 gap-2">
+                            <input type="text" id="stuName" placeholder="Name" class="border p-2 rounded">
+                            <input type="text" id="stuFather" placeholder="Father's Name" class="border p-2 rounded">
+                            <input type="text" id="stuID" placeholder="ID" class="border p-2 rounded">
+                            <input type="number" id="stuRoll" placeholder="Roll" class="border p-2 rounded">
+                            <button onclick="addStudent()" class="bg-primary text-white px-3 py-2 rounded">Save</button>
+                        </div>
+                    </div>
+
+                    <table class="w-full text-sm text-left text-gray-500"><thead class="bg-gray-100"><tr><th class="px-4 py-2">Roll</th><th class="px-4 py-2">Name</th><th class="px-4 py-2">Father</th><th class="px-4 py-2">Action</th></tr></thead><tbody id="studentTableBody"></tbody></table>
+                </div>
+            </div>
+
+            <!-- 3. RESULT CONFIGURATION -->
+            <div id="examConfigSection" class="section-content hidden">
+                <h1 class="text-2xl font-bold mb-6">Result Configuration</h1>
+                <div class="bg-white p-6 rounded-lg shadow-sm space-y-8">
+                    <div class="border-b pb-6">
+                        <h3 class="font-semibold mb-3 text-lg">1. Define Exams</h3>
+                        <div class="flex gap-2"><input type="text" id="examName" placeholder="Exam Name" class="flex-1 border p-2 rounded"><button onclick="addExam()" class="bg-primary text-white px-4 py-2 rounded">Add Exam</button></div>
+                        <ul id="examList" class="mt-4 space-y-2 text-sm"></ul>
+                    </div>
+                    <div class="border-b pb-6">
+                        <h3 class="font-semibold mb-3 text-lg">2. Define Subjects per Class</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4"><select id="configClassSelect" class="border p-2 rounded" onchange="loadClassSubjects()"></select><div><textarea id="classSubjectsInput" rows="2" class="w-full border p-2 rounded" placeholder="English, Math, Science..."></textarea><button onclick="saveClassSubjects()" class="mt-2 bg-gray-800 text-white px-4 py-2 rounded text-sm w-full">Save Subjects</button></div></div>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold mb-3 text-lg">3. Configure Max Marks</h3>
+                        <button onclick="renderMaxMarksGrid()" class="bg-accent text-white px-6 py-2 rounded shadow">Load Marks Configuration</button>
+                        <div id="maxMarksGridContainer" class="mt-4 overflow-x-auto hidden"></div>
+                        <button id="saveMaxMarksBtn" onclick="saveMaxMarksConfig()" class="mt-4 bg-green-600 text-white px-6 py-2 rounded hidden">Save Marks Config</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. MARKS ENTRY -->
+            <div id="marksEntrySection" class="section-content hidden">
+                <h1 class="text-2xl font-bold mb-6">Enter Marks</h1>
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <div class="flex flex-wrap gap-4 mb-6 border-b pb-4">
+                        <select id="markClassSelect" class="border p-2 rounded min-w-[200px]"></select>
+                        <select id="markExamSelect" class="border p-2 rounded min-w-[200px]"></select>
+                        <button onclick="loadMarksTable()" class="bg-accent text-white px-6 py-2 rounded">Load Sheet</button>
+                    </div>
+                    <div id="marksTableContainer" class="overflow-x-auto"></div>
+                    <div id="saveMarksBtnContainer" class="hidden mt-4 text-right">
+                        <button onclick="saveMarks()" class="bg-green-600 text-white px-8 py-3 rounded font-bold shadow">Save Marks</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. REPORTS -->
+            <div id="reportsSection" class="section-content hidden">
+                <h1 class="text-2xl font-bold mb-6">Reports & Certificates</h1>
+                <div class="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-wrap gap-4 items-center">
+                    <div class="flex-1"><label class="block text-sm font-bold text-gray-700 mb-1">Select Class for Bulk Generation</label><select id="reportClassSelect" class="w-full border p-2 rounded"></select></div>
+                    <div class="flex gap-2 mt-6">
+                        <button onclick="generatePreview('report')" class="bg-primary text-white px-4 py-2 rounded hover:bg-blue-800 transition shadow-md"><i class="fas fa-layer-group"></i> Generate All Progress Cards</button>
+                        <button onclick="generatePreview('certificate')" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-800 transition shadow-md"><i class="fas fa-certificate"></i> Generate All Certificates</button>
+                        <button onclick="window.print()" class="bg-gray-800 text-white px-6 py-2 rounded hover:bg-black transition shadow-md"><i class="fas fa-print"></i> Print / Save PDF</button>
+                    </div>
+                </div>
+                <div class="flex justify-center bg-gray-200 p-4 overflow-auto border rounded-lg h-[500px]">
+                    <div id="previewArea" class="w-full flex flex-col items-center space-y-8"><div class="text-center text-gray-400 p-10 bg-white shadow w-full max-w-md rounded mt-10">Select a class and click Generate.</div></div>
+                </div>
+            </div>
+
+            <!-- 6. CUMULATIVE RANKING -->
+            <div id="progressSection" class="section-content hidden">
+                <h1 class="text-2xl font-bold mb-6">Cumulative Rank List</h1>
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <div class="flex gap-4 mb-6 items-end">
+                        <div class="flex-1"><label class="block text-sm font-bold text-gray-700 mb-1">Select Class</label><select id="rankClassSelect" class="border p-2 rounded w-full"></select></div>
+                        <button onclick="generateRankList()" class="bg-green-600 text-white px-8 py-2 rounded hover:bg-green-700 mb-[1px]"><i class="fas fa-list-ol"></i> Generate Cumulative Rank List</button>
+                    </div>
+                    <div id="rankListPreview" class="border p-2 bg-gray-50 text-xs min-h-[100px] mb-4 hidden"></div>
+                    <button id="printRankBtn" onclick="window.print()" class="w-full bg-gray-800 text-white py-2 rounded hidden"><i class="fas fa-print"></i> Print Rank List</button>
+                </div>
+            </div>
+
+            <!-- 7. ADMIT CARD GENERATION -->
+            <div id="admitCardSection" class="section-content hidden">
+                <h1 class="text-2xl font-bold mb-6">Generate Admit Cards</h1>
+                <div class="bg-white p-6 rounded-lg shadow-sm">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Select Class</label><select id="admitClassSelect" class="w-full border p-2 rounded"></select></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Name of Examination</label><input type="text" id="admitExamName" placeholder="e.g., Annual Exam 2025" class="w-full border p-2 rounded"></div>
+                        <div><label class="block text-sm font-medium text-gray-700 mb-1">Date of Commencement</label><input type="date" id="admitDate" class="w-full border p-2 rounded"></div>
+                    </div>
+                    <div class="flex justify-end"><button onclick="generateAdmitCards()" class="bg-blue-800 text-white px-8 py-3 rounded font-bold shadow hover:bg-blue-900"><i class="fas fa-id-card"></i> Generate & Preview</button></div>
+                </div>
+                <div class="mt-8 flex justify-center bg-gray-200 p-4 overflow-auto hidden" id="admitPreviewWrapper"><div id="admitPreviewArea"></div></div>
+                <div class="text-center mt-4 hidden" id="admitPrintBtn"><button onclick="window.print()" class="bg-gray-800 text-white px-6 py-3 rounded shadow hover:bg-black"><i class="fas fa-print"></i> Print Admit Cards</button></div>
+            </div>
+
+        </main>
+    </div>
+
+    <script type="module">
+        // --- FIREBASE CONFIGURATION ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // *** UPDATED FIREBASE CONFIG ***
+        const firebaseConfig = {
+            apiKey: "AIzaSyDJjHUMwXUExy5yzIjLwKIeF-HCJ0lJvuk",
+            authDomain: "school-7e0f2.firebaseapp.com",
+            projectId: "school-7e0f2",
+            storageBucket: "school-7e0f2.firebasestorage.app",
+            messagingSenderId: "1041273059114",
+            appId: "1:1041273059114:web:e1de6e0c46857228a8d053"
+        };
+
+        // Init Firebase
+        let app, auth, dbFirestore;
+        try {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            dbFirestore = getFirestore(app);
+        } catch (e) {
+            console.error("Firebase Init Error:", e);
+            alert("Error initializing Firebase. Check console for details.");
+        }
+
+        const APP_ID = 'school_crm_v1'; // Stable ID for your school data
+
+        // --- GLOBAL STATE ---
+        let db = { schoolName: "", classes: [], exams: [] };
+        let currentUser = null;
+
+        // --- AUTH STATE OBSERVER ---
+        if (auth) {
+            onAuthStateChanged(auth, async (user) => {
+                const loading = document.getElementById('loadingOverlay');
+                const loginScreen = document.getElementById('loginScreen');
+                const appLayout = document.getElementById('appLayout');
+
+                if (user) {
+                    currentUser = user;
+                    loading.classList.remove('hidden');
+                    
+                    // Fetch School Data
+                    try {
+                        const docRef = doc(dbFirestore, 'artifacts', APP_ID, 'users', user.uid, 'school_data', 'main');
+                        const docSnap = await getDoc(docRef);
+
+                        if (docSnap.exists()) {
+                            db = docSnap.data();
+                        } else {
+                            // Initialize new user data
+                            db = { schoolName: user.displayName || "New School", classes: [], exams: [] };
+                            await setDoc(docRef, db);
+                        }
+                        
+                        updateUIOnLogin();
+                        loginScreen.classList.add('hidden');
+                        appLayout.classList.remove('hidden');
+                    } catch (error) {
+                        console.error("Error fetching data:", error);
+                        // Even if fetch fails, show app layout but empty
+                        loginScreen.classList.add('hidden');
+                        appLayout.classList.remove('hidden');
+                        alert("Could not load previous data. Using offline/empty state. Check your internet or permissions.");
+                    } finally {
+                        loading.classList.add('hidden');
+                    }
+                } else {
+                    currentUser = null;
+                    appLayout.classList.add('hidden');
+                    loginScreen.classList.remove('hidden');
+                }
+            });
+        }
+
+        // --- UI LOGIC FOR AUTH ---
+        window.handleLogin = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const pass = document.getElementById('loginPassword').value;
+            const errorMsg = document.getElementById('authError');
+            errorMsg.classList.add('hidden');
+            
+            try {
+                document.getElementById('loadingOverlay').classList.remove('hidden');
+                await signInWithEmailAndPassword(auth, email, pass);
+            } catch (error) {
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                errorMsg.textContent = "Login Failed: " + error.message.replace('Firebase:', '').trim();
+                errorMsg.classList.remove('hidden');
+            }
+        };
+
+        // Expose to window for HTML button access
+        const regForm = document.getElementById('registerForm');
+        if(regForm) {
+            regForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const name = document.getElementById('regSchoolName').value;
+                const email = document.getElementById('regEmail').value;
+                const pass = document.getElementById('regPassword').value;
+                const confirm = document.getElementById('regConfirmPassword').value;
+                const errorMsg = document.getElementById('authError');
+                errorMsg.classList.add('hidden');
+
+                if (pass !== confirm) {
+                    errorMsg.textContent = "Passwords do not match!";
+                    errorMsg.classList.remove('hidden');
+                    return;
+                }
+
+                try {
+                    document.getElementById('loadingOverlay').classList.remove('hidden');
+                    const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+                    await updateProfile(userCredential.user, { displayName: name });
+                    
+                    // Initial DB Save happens in onAuthStateChanged
+                } catch (error) {
+                    document.getElementById('loadingOverlay').classList.add('hidden');
+                    errorMsg.textContent = "Registration Failed: " + error.message.replace('Firebase:', '').trim();
+                    errorMsg.classList.remove('hidden');
+                }
+            });
+        }
+
+        document.getElementById('btnLogout').addEventListener('click', () => {
+            signOut(auth);
+        });
+
+        // Toggle Login/Register
+        document.getElementById('tabLogin').addEventListener('click', () => {
+            document.getElementById('loginForm').classList.remove('hidden');
+            document.getElementById('registerForm').classList.add('hidden');
+            document.getElementById('tabLogin').classList.add('border-b-2', 'border-blue-600', 'text-blue-600');
+            document.getElementById('tabLogin').classList.remove('text-gray-500');
+            document.getElementById('tabRegister').classList.remove('border-b-2', 'border-blue-600', 'text-blue-600');
+            document.getElementById('tabRegister').classList.add('text-gray-500');
+            document.getElementById('authError').classList.add('hidden');
+        });
+
+        document.getElementById('tabRegister').addEventListener('click', () => {
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('registerForm').classList.remove('hidden');
+            document.getElementById('tabRegister').classList.add('border-b-2', 'border-blue-600', 'text-blue-600');
+            document.getElementById('tabRegister').classList.remove('text-gray-500');
+            document.getElementById('tabLogin').classList.remove('border-b-2', 'border-blue-600', 'text-blue-600');
+            document.getElementById('tabLogin').classList.add('text-gray-500');
+            document.getElementById('authError').classList.add('hidden');
+        });
+
+        // --- DATA PERSISTENCE (FIRESTORE) ---
+        window.saveData = async () => {
+            if (!currentUser) return;
+            try {
+                const docRef = doc(dbFirestore, 'artifacts', APP_ID, 'users', currentUser.uid, 'school_data', 'main');
+                await setDoc(docRef, db);
+                showToast();
+                updateStats();
+            } catch (e) {
+                console.error("Save Error:", e);
+                alert("Failed to save data to cloud. Check console.");
+            }
+        };
+
+        // --- UTILS ---
+        function showToast() {
+            const t = document.getElementById('toast');
+            t.classList.remove('translate-x-full');
+            setTimeout(() => t.classList.add('translate-x-full'), 2000);
+        }
+
+        function updateUIOnLogin() {
+            document.getElementById('ribbonSchoolName').textContent = db.schoolName;
+            document.getElementById('displaySchoolName').textContent = db.schoolName;
+            document.getElementById('welcomeRibbon').classList.remove('hidden');
+            updateStats();
+            renderTags();
+            renderExams();
+            populateDropdowns();
+        }
+
+        // --- BIND WINDOW FUNCTIONS (Because Module Scope is Private) ---
+        // We attach necessary functions to window so inline HTML onclicks work
+        
+        // Navigation
+        window.showSection = (id) => {
+            document.querySelectorAll('.section-content').forEach(e => e.classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        };
+
+        window.updateStats = () => {
+            document.getElementById('dashTotalStudents').textContent = db.classes.reduce((a,c)=>a+c.students.length,0);
+            document.getElementById('dashTotalClasses').textContent = db.classes.length;
+            document.getElementById('dashTotalExams').textContent = db.exams.length;
+        };
+
+        // Classes
+        window.addClass = () => {
+            const name = document.getElementById('newClassName').value.trim();
+            if(!name) return;
+            db.classes.push({ name, students: [], subjects: [], marksConfig: {} });
+            document.getElementById('newClassName').value = '';
+            saveData();
+            renderTags();
+            populateDropdowns();
+        };
+
+        window.renderTags = () => {
+            document.getElementById('classListContainer').innerHTML = db.classes.map(c => 
+                `<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm border border-blue-200">${c.name}</span>`
+            ).join('');
+        };
+
+        // Students
+        window.addStudent = () => {
+            const clsIdx = document.getElementById('studentClassSelect').selectedIndex - 1;
+            if(clsIdx < 0) return alert("Select Class");
+            const name = document.getElementById('stuName').value;
+            const roll = document.getElementById('stuRoll').value;
+            if(!name || !roll) return alert("Name/Roll required");
+            
+            db.classes[clsIdx].students.push({
+                name, roll, id: document.getElementById('stuID').value,
+                father: document.getElementById('stuFather').value,
+                marks: {},
+                extra: { dob: '', phone: '', address: '' }
+            });
+            db.classes[clsIdx].students.sort((a,b)=>a.roll-b.roll);
+            ['stuName','stuFather','stuID','stuRoll'].forEach(id=>document.getElementById(id).value='');
+            saveData();
+            renderStudentList();
+        };
+
+        window.renderStudentList = () => {
+            const clsIdx = document.getElementById('studentClassSelect').selectedIndex - 1;
+            const tbody = document.getElementById('studentTableBody');
+            if(clsIdx < 0) return tbody.innerHTML = '';
+            tbody.innerHTML = db.classes[clsIdx].students.map((s,i) => 
+                `<tr class="border-b">
+                    <td class="px-4 py-2">${s.roll}</td>
+                    <td class="px-4 py-2">${s.name}</td>
+                    <td class="px-4 py-2">${s.father}</td>
+                    <td class="px-4 py-2 flex gap-2">
+                        <button onclick="editStudent(${clsIdx},${i})" class="text-blue-600 hover:text-blue-800"><i class="fas fa-edit"></i></button>
+                        <button onclick="delStu(${clsIdx},${i})" class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`
+            ).join('');
+        };
+
+        window.delStu = (ci, si) => { if(confirm("Delete?")) { db.classes[ci].students.splice(si,1); saveData(); renderStudentList(); } };
+
+        // Edit Student
+        window.editStudent = (ci, si) => {
+            const s = db.classes[ci].students[si];
+            document.getElementById('editStuClassIdx').value = ci;
+            document.getElementById('editStuIdx').value = si;
+            document.getElementById('editStuName').value = s.name;
+            document.getElementById('editStuFather').value = s.father;
+            document.getElementById('editStuRoll').value = s.roll;
+            document.getElementById('editStuID').value = s.id;
+            if(!s.extra) s.extra = { dob: '', phone: '', address: '' };
+            document.getElementById('editStuDOB').value = s.extra.dob || '';
+            document.getElementById('editStuPhone').value = s.extra.phone || '';
+            document.getElementById('editStuAddress').value = s.extra.address || '';
+            toggleModal('editStudentModal');
+        };
+
+        window.saveEditedStudent = () => {
+            const ci = document.getElementById('editStuClassIdx').value;
+            const si = document.getElementById('editStuIdx').value;
+            if(ci === '' || si === '') return;
+            const s = db.classes[ci].students[si];
+            s.name = document.getElementById('editStuName').value;
+            s.father = document.getElementById('editStuFather').value;
+            s.roll = document.getElementById('editStuRoll').value;
+            s.id = document.getElementById('editStuID').value;
+            s.extra = {
+                dob: document.getElementById('editStuDOB').value,
+                phone: document.getElementById('editStuPhone').value,
+                address: document.getElementById('editStuAddress').value
+            };
+            db.classes[ci].students.sort((a,b) => a.roll - b.roll);
+            saveData();
+            toggleModal('editStudentModal');
+            renderStudentList();
+        };
+
+        document.getElementById('btnUpdateStudent').onclick = window.saveEditedStudent;
+
+        window.toggleModal = (id) => {
+            const modal = document.getElementById(id);
+            modal.classList.toggle('opacity-0');
+            modal.classList.toggle('pointer-events-none');
+            document.body.classList.toggle('modal-active');
+        };
+
+        // Exams
+        window.addExam = () => {
+            const name = document.getElementById('examName').value;
+            if(!name) return;
+            db.exams.push({ name }); 
+            document.getElementById('examName').value='';
+            saveData();
+            renderExams();
+            populateDropdowns();
+        };
+        window.renderExams = () => {
+            document.getElementById('examList').innerHTML = db.exams.map((e,i) => 
+                `<li class="flex justify-between bg-gray-50 p-2 border rounded"><span>${e.name}</span><button class="text-red-500" onclick="delExam(${i})">x</button></li>`
+            ).join('');
+        };
+        window.delExam = (i) => { db.exams.splice(i,1); saveData(); renderExams(); populateDropdowns(); };
+
+        // Subjects & Marks Config
+        window.loadClassSubjects = () => {
+            const i = document.getElementById('configClassSelect').selectedIndex - 1;
+            if(i<0) return;
+            document.getElementById('classSubjectsInput').value = (db.classes[i].subjects || []).join(', ');
+        };
+        window.saveClassSubjects = () => {
+            const i = document.getElementById('configClassSelect').selectedIndex - 1;
+            if(i<0) return alert("Select Class");
+            const raw = document.getElementById('classSubjectsInput').value;
+            db.classes[i].subjects = raw.split(',').map(s=>s.trim()).filter(s=>s);
+            saveData();
+        };
+
+        window.renderMaxMarksGrid = () => {
+            const clsIdx = document.getElementById('configClassSelect').selectedIndex - 1;
+            if(clsIdx < 0) return alert("Please Select a Class in Step 2 first.");
+            const cls = db.classes[clsIdx];
+            if(cls.subjects.length === 0 || db.exams.length === 0) return alert("Define Subjects and Exams first.");
+            let html = `<table class="w-full text-sm border-collapse"><thead><tr class="bg-gray-100"><th class="border p-2">Subject</th>`;
+            db.exams.forEach(e => html += `<th class="border p-2">${e.name}</th>`);
+            html += `</tr></thead><tbody>`;
+            cls.subjects.forEach(sub => {
+                html += `<tr><td class="border p-2 font-bold">${sub}</td>`;
+                db.exams.forEach(e => {
+                    const val = (cls.marksConfig && cls.marksConfig[e.name] && cls.marksConfig[e.name][sub]) || 100;
+                    html += `<td class="border p-1"><input type="number" class="config-max-input w-full p-1 border text-center" data-exam="${e.name}" data-sub="${sub}" value="${val}"></td>`;
+                });
+                html += `</tr>`;
+            });
+            html += `</tbody></table>`;
+            document.getElementById('maxMarksGridContainer').innerHTML = html;
+            document.getElementById('maxMarksGridContainer').classList.remove('hidden');
+            document.getElementById('saveMaxMarksBtn').classList.remove('hidden');
+        };
+
+        window.saveMaxMarksConfig = () => {
+            const clsIdx = document.getElementById('configClassSelect').selectedIndex - 1;
+            const inputs = document.querySelectorAll('.config-max-input');
+            if(!db.classes[clsIdx].marksConfig) db.classes[clsIdx].marksConfig = {};
+            inputs.forEach(inp => {
+                const ex = inp.getAttribute('data-exam');
+                const sub = inp.getAttribute('data-sub');
+                if(!db.classes[clsIdx].marksConfig[ex]) db.classes[clsIdx].marksConfig[ex] = {};
+                db.classes[clsIdx].marksConfig[ex][sub] = parseInt(inp.value) || 0;
+            });
+            saveData();
+        };
+
+        // Marks Entry
+        window.loadMarksTable = () => {
+            const ci = document.getElementById('markClassSelect').selectedIndex - 1;
+            const ei = document.getElementById('markExamSelect').selectedIndex - 1;
+            if(ci<0 || ei<0) return alert("Select Class & Exam");
+            const cls = db.classes[ci];
+            const examName = db.exams[ei].name;
+            const subjects = cls.subjects;
+            let html = `<table class="w-full border-collapse text-sm"><thead><tr class="bg-gray-200"><th class="border p-2">Roll</th><th class="border p-2">Name</th>`;
+            subjects.forEach(sub => {
+                const max = (cls.marksConfig && cls.marksConfig[examName] && cls.marksConfig[examName][sub]) || 100;
+                html += `<th class="border p-2">${sub} <span class="text-xs text-gray-500">/${max}</span></th>`;
+            });
+            html += `</tr></thead><tbody>`;
+            cls.students.forEach((s, si) => {
+                html += `<tr><td class="border p-2 bg-gray-50 font-bold">${s.roll}</td><td class="border p-2 bg-gray-50">${s.name}</td>`;
+                subjects.forEach(sub => {
+                    const val = (s.marks[examName] && s.marks[examName][sub]) !== undefined ? s.marks[examName][sub] : '';
+                    const max = (cls.marksConfig && cls.marksConfig[examName] && cls.marksConfig[examName][sub]) || 100;
+                    html += `<td class="border p-1"><input type="number" class="mark-input w-full p-1 border text-center" data-si="${si}" data-sub="${sub}" value="${val}" min="0" max="${max}"></td>`;
+                });
+                html += `</tr>`;
+            });
+            html += `</tbody></table>`;
+            document.getElementById('marksTableContainer').innerHTML = html;
+            document.getElementById('saveMarksBtnContainer').classList.remove('hidden');
+        };
+
+        window.saveMarks = () => {
+            const ci = document.getElementById('markClassSelect').selectedIndex - 1;
+            const ei = document.getElementById('markExamSelect').selectedIndex - 1;
+            const examName = db.exams[ei].name;
+            document.querySelectorAll('.mark-input').forEach(inp => {
+                const si = inp.getAttribute('data-si');
+                const sub = inp.getAttribute('data-sub');
+                if(!db.classes[ci].students[si].marks[examName]) db.classes[ci].students[si].marks[examName] = {};
+                if(inp.value !== '') db.classes[ci].students[si].marks[examName][sub] = parseFloat(inp.value);
+            });
+            saveData();
+        };
+
+        // Reports
+        window.populateDropdowns = () => {
+            const cOpt = `<option value="">-- Select --</option>` + db.classes.map((c,i)=>`<option value="${i}">${c.name}</option>`).join('');
+            ['studentClassSelect','markClassSelect','reportClassSelect','configClassSelect', 'admitClassSelect', 'rankClassSelect'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.innerHTML = cOpt;
+            });
+            const eOpt = `<option value="">-- Select --</option>` + db.exams.map((e,i)=>`<option value="${i}">${e.name}</option>`).join('');
+            document.getElementById('markExamSelect').innerHTML = eOpt;
+        };
+
+        window.loadReportStudents = () => {};
+
+        window.getGrade = (pct) => {
+            if(pct>=90) return 'A+'; if(pct>=80) return 'A'; if(pct>=70) return 'B+';
+            if(pct>=60) return 'B'; if(pct>=50) return 'C'; if(pct>=40) return 'D'; return 'F';
+        };
+
+        // Ranking
+        window.generateRankList = () => {
+            const ci = document.getElementById('rankClassSelect').selectedIndex - 1;
+            if(ci < 0) return alert("Select Class");
+            const cls = db.classes[ci];
+            let rankedList = cls.students.map(s => {
+                let grandTotalObt = 0;
+                let grandTotalMax = 0;
+                db.exams.forEach(exam => {
+                    (cls.subjects || []).forEach(sub => {
+                         const obt = (s.marks[exam.name] && s.marks[exam.name][sub]) || 0;
+                         const max = (cls.marksConfig && cls.marksConfig[exam.name] && cls.marksConfig[exam.name][sub]) || 100;
+                         grandTotalObt += obt; grandTotalMax += max;
+                    });
+                });
+                return { ...s, grandTotalObt, grandTotalMax, pct: grandTotalMax > 0 ? (grandTotalObt/grandTotalMax)*100 : 0 };
+            }).sort((a, b) => b.grandTotalObt - a.grandTotalObt);
+
+            let html = `
+            <div class="a4-paper">
+                <div class="text-center border-b-2 border-gray-800 pb-2 mb-4"><h1 class="text-2xl font-bold uppercase">${db.schoolName}</h1><p class="text-sm text-gray-600">Cumulative Rank List (All Exams) | Class: ${cls.name}</p></div>
+                <table class="w-full text-sm border-collapse border border-gray-400">
+                    <thead><tr class="bg-gray-200"><th class="border border-gray-400 p-2">Rank</th><th class="border border-gray-400 p-2">Roll</th><th class="border border-gray-400 p-2 text-left">Student Name</th><th class="border border-gray-400 p-2">Total Marks</th><th class="border border-gray-400 p-2">Obtained</th><th class="border border-gray-400 p-2">%</th></tr></thead>
+                    <tbody>`;
+            rankedList.forEach((s, idx) => {
+                html += `<tr><td class="border border-gray-400 p-2 text-center font-bold">${idx + 1}</td><td class="border border-gray-400 p-2 text-center">${s.roll}</td><td class="border border-gray-400 p-2">${s.name}</td><td class="border border-gray-400 p-2 text-center">${s.grandTotalMax}</td><td class="border border-gray-400 p-2 text-center font-bold">${s.grandTotalObt}</td><td class="border border-gray-400 p-2 text-center">${s.pct.toFixed(1)}%</td></tr>`;
+            });
+            html += `</tbody></table><div class="text-right text-xs text-gray-400 mt-4">Generated on ${new Date().toLocaleDateString()}</div></div>`;
+            document.getElementById('rankListPreview').innerHTML = html;
+            document.getElementById('rankListPreview').classList.remove('hidden');
+            document.getElementById('printContainer').innerHTML = html;
+            document.getElementById('printRankBtn').classList.remove('hidden');
+        };
+
+        // Admit Cards
+        window.generateAdmitCards = () => {
+            const ci = document.getElementById('admitClassSelect').selectedIndex - 1;
+            const examName = document.getElementById('admitExamName').value;
+            const date = document.getElementById('admitDate').value;
+            if(ci < 0 || !examName || !date) return alert("Please select Class, enter Exam Name and Date.");
+            const cls = db.classes[ci];
+            if(cls.students.length === 0) return alert("No students in this class.");
+            const subjectList = (cls.subjects || []).join(', ');
+            let students = cls.students;
+            let html = '';
+            for(let i = 0; i < students.length; i += 4) {
+                let chunk = students.slice(i, i + 4);
+                html += `<div class="a4-paper"><div class="admit-grid">`;
+                chunk.forEach(s => {
+                    html += `<div class="admit-card"><div class="text-center border-b pb-2 mb-2"><h2 class="font-bold text-blue-900 uppercase text-sm tracking-wider">${db.schoolName}</h2><p class="text-xs text-gray-500 mt-1">ADMIT CARD</p></div><div class="flex-1 text-sm space-y-1 mt-1"><div class="flex border-b border-dotted pb-1"><span class="w-24 font-semibold text-gray-600">Exam:</span> <span class="font-bold">${examName}</span></div><div class="flex border-b border-dotted pb-1 pt-1"><span class="w-24 font-semibold text-gray-600">Student:</span> <span class="font-bold uppercase">${s.name}</span></div><div class="flex border-b border-dotted pb-1 pt-1"><span class="w-24 font-semibold text-gray-600">Father:</span> <span class="uppercase">${s.father}</span></div><div class="flex border-b border-dotted pb-1 pt-1"><span class="w-24 font-semibold text-gray-600">Class:</span> <span>${cls.name}</span></div><div class="flex border-b border-dotted pb-1 pt-1"><span class="w-24 font-semibold text-gray-600">Roll No:</span> <span>${s.roll}</span></div><div class="flex border-b border-dotted pb-1 pt-1"><span class="w-24 font-semibold text-gray-600">Date:</span> <span>${date}</span></div><div class="pt-2"><span class="block font-semibold text-gray-600 text-xs mb-1">Subjects:</span><p class="text-xs text-gray-800 leading-tight">${subjectList}</p></div></div><div class="mt-4 pt-2 border-t flex justify-end items-end text-xs text-gray-500"><div class="text-center w-24 border-t border-gray-400 pt-1">Principal</div></div></div>`;
+                });
+                html += `</div></div>`;
+            }
+            document.getElementById('admitPreviewArea').innerHTML = html;
+            document.getElementById('printContainer').innerHTML = html; 
+            document.getElementById('admitPreviewWrapper').classList.remove('hidden');
+            document.getElementById('admitPrintBtn').classList.remove('hidden');
+        };
+
+        // Bulk Report
+        window.generatePreview = (type) => {
+            const ci = document.getElementById('reportClassSelect').selectedIndex - 1;
+            if(ci < 0) return alert("Please Select a Class.");
+            const cls = db.classes[ci];
+            if(cls.students.length === 0) return alert("No students in this class.");
+            let allContent = '';
+            let chartDataList = [];
+
+            cls.students.forEach((s, idx) => {
+                if (type === 'report') {
+                    let chartId = `reportChart_${idx}`;
+                    allContent += `<div class="a4-paper"><div class="text-center border-b-2 border-gray-800 pb-4 mb-6"><h1 class="text-4xl font-bold uppercase text-blue-900">${db.schoolName}</h1><p class="text-gray-600">Academic Progress Report</p></div><div class="grid grid-cols-2 gap-4 text-sm mb-6"><div>Name: <b>${s.name}</b></div><div>Class: <b>${cls.name}</b></div><div>Father: <b>${s.father}</b></div><div>Roll: <b>${s.roll}</b> | ID: ${s.id}</div></div><table class="w-full border-collapse border border-gray-400 text-sm mb-6"><thead><tr class="bg-gray-100"><th class="border border-gray-400 p-2">Subject</th>`;
+                    db.exams.forEach(e => allContent += `<th class="border border-gray-400 p-2">${e.name}</th>`);
+                    allContent += `<th class="border border-gray-400 p-2">Total</th><th class="border border-gray-400 p-2">Grade</th></tr></thead><tbody>`;
+                    let labels = [], data = [];
+                    cls.subjects.forEach(sub => {
+                        allContent += `<tr><td class="border border-gray-400 p-2 font-bold">${sub}</td>`;
+                        let subTotal = 0, maxTotal = 0;
+                        db.exams.forEach(e => {
+                            const obt = (s.marks[e.name] && s.marks[e.name][sub]) !== undefined ? s.marks[e.name][sub] : '-';
+                            const max = (cls.marksConfig && cls.marksConfig[e.name] && cls.marksConfig[e.name][sub]) || 100;
+                            allContent += `<td class="border border-gray-400 p-2 text-center">${obt} <span class="text-xs text-gray-500">/${max}</span></td>`;
+                            if(obt !== '-') { subTotal += obt; maxTotal += max; }
+                        });
+                        const pct = maxTotal > 0 ? (subTotal/maxTotal)*100 : 0;
+                        allContent += `<td class="border border-gray-400 p-2 text-center font-bold">${subTotal} / ${maxTotal}</td><td class="border border-gray-400 p-2 text-center">${getGrade(pct)}</td></tr>`;
+                    });
+                    db.exams.forEach(e => {
+                        let totalObt = 0, totalMax = 0;
+                        cls.subjects.forEach(sub => {
+                            const obt = (s.marks[e.name] && s.marks[e.name][sub]) || 0;
+                            const max = (cls.marksConfig && cls.marksConfig[e.name] && cls.marksConfig[e.name][sub]) || 100;
+                            totalObt += obt; totalMax += max;
+                        });
+                        if(totalMax > 0) { labels.push(e.name); data.push((totalObt/totalMax)*100); }
+                    });
+                    if(labels.length > 0) { chartDataList.push({ id: chartId, labels: labels, data: data }); }
+                    allContent += `</tbody></table><div class="h-64 mb-6"><canvas id="${chartId}"></canvas></div><div class="flex justify-between text-sm pt-8 mt-8"><div class="text-center w-1/4 border-t border-gray-400 pt-2">Class Teacher</div><div class="text-center w-1/4 border-t border-gray-400 pt-2">Principal</div><div class="text-center w-1/4 border-t border-gray-400 pt-2">Parent</div></div></div>`;
+                } else {
+                    allContent += `<div class="a4-paper flex flex-col justify-center items-center text-center border-8 border-double border-blue-900 p-10"><i class="fas fa-award text-6xl text-yellow-500 mb-6"></i><h1 class="text-5xl font-serif font-bold text-blue-900 mb-2">Certificate of Merit</h1><p class="text-lg text-gray-600 mb-10">This certifies that</p><h2 class="text-4xl font-bold border-b-2 border-gray-300 pb-2 px-10 mb-4">${s.name}</h2><p class="text-lg text-gray-700 mb-8">Son/Daughter of <b>${s.father}</b>, Class: <b>${cls.name}</b></p><p class="max-w-2xl text-gray-600 leading-relaxed mb-12">Has successfully completed the academic requirements for the year.</p><div class="flex justify-between w-full px-10 mt-auto mb-10"><div class="text-center"><div class="w-40 border-b border-gray-800 mb-2"></div><div class="font-bold">Date</div></div><div class="text-center"><div class="w-40 border-b border-gray-800 mb-2"></div><div class="font-bold">Principal</div></div></div></div>`;
+                }
+            });
+
+            document.getElementById('previewArea').innerHTML = allContent;
+            document.getElementById('printContainer').innerHTML = allContent; 
+            
+            setTimeout(() => {
+                chartDataList.forEach(item => {
+                    const ctxPreview = document.getElementById(item.id);
+                    if (ctxPreview) { new Chart(ctxPreview, { type: 'bar', data: { labels: item.labels, datasets: [{ label: 'Overall %', data: item.data, backgroundColor: '#3b82f6' }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } } }); }
+                    const printContainer = document.getElementById('printContainer');
+                    printContainer.innerHTML = printContainer.innerHTML.replace(new RegExp(item.id, 'g'), 'print_' + item.id);
+                    const ctxPrint = document.getElementById('print_' + item.id);
+                    if(ctxPrint) { new Chart(ctxPrint, { type: 'bar', data: { labels: item.labels, datasets: [{ label: 'Overall %', data: item.data, backgroundColor: '#3b82f6' }] }, options: { responsive: true, maintainAspectRatio: false, animation: false, scales: { y: { beginAtZero: true, max: 100 } } } }); }
+                });
+            }, 500);
+        }
+    </script>
+</body>
+</html>
