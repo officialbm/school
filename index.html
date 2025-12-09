@@ -100,17 +100,50 @@
         <p class="w-1/3 text-center text-gray-500">Connecting to database...</p>
     </div>
 
-    <!-- EDIT MODAL -->
+    <!-- PROMOTION MODAL -->
+    <div id="promotionModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-[70]">
+        <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-75"></div>
+        <div class="modal-container bg-white w-11/12 md:max-w-md mx-auto rounded shadow-lg z-50 overflow-y-auto">
+            <div class="modal-content py-4 text-left px-6">
+                <div class="flex justify-between items-center pb-3 border-b">
+                    <p class="text-2xl font-bold text-blue-800"><i class="fas fa-graduation-cap"></i> Academic Promotion</p>
+                </div>
+                <div class="my-5">
+                    <p class="font-semibold text-gray-800">The Academic Year has ended!</p>
+                    <p class="text-sm text-gray-600 mt-2">The system is ready to promote students to the next class automatically.</p>
+                    <ul class="list-disc list-inside text-sm text-gray-600 mt-2 bg-gray-100 p-3 rounded">
+                        <li>Students move to the next class sequence.</li>
+                        <li>Marks will be reset for the new session.</li>
+                        <li>Final year students will move to Alumni.</li>
+                    </ul>
+                    <p class="text-red-500 text-xs mt-3 font-bold">⚠️ Note: This action cannot be undone automatically.</p>
+                </div>
+                <div class="flex justify-end pt-2">
+                    <button onclick="toggleModal('promotionModal')" class="bg-gray-300 text-gray-800 px-4 py-2 rounded mr-2">Not Now</button>
+                    <button onclick="executePromotion()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-bold">Promote Students</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT MODAL (UPDATED WITH CLASS SELECT) -->
     <div id="editStudentModal" class="modal opacity-0 pointer-events-none fixed w-full h-full top-0 left-0 flex items-center justify-center z-50">
         <div class="modal-overlay absolute w-full h-full bg-gray-900 opacity-50"></div>
         <div class="modal-container bg-white w-11/12 md:max-w-lg mx-auto rounded shadow-lg z-50 overflow-y-auto">
             <div class="modal-content py-4 text-left px-6">
                 <div class="flex justify-between items-center pb-3 border-b">
-                    <p class="text-2xl font-bold">Edit Student</p>
+                    <p class="text-2xl font-bold">Edit Student Profile</p>
                     <div class="modal-close cursor-pointer z-50" onclick="toggleModal('editStudentModal')"><i class="fas fa-times text-black"></i></div>
                 </div>
                 <div class="my-5 space-y-3">
                     <input type="hidden" id="editStuClassIdx"><input type="hidden" id="editStuIdx">
+                    
+                    <!-- Class Selection (New) -->
+                    <div class="mb-2">
+                        <label class="block text-sm font-bold mb-1 text-blue-800">Current Class</label>
+                        <select id="editStuClassSelect" class="w-full border p-2 rounded bg-blue-50 border-blue-200"></select>
+                    </div>
+
                     <div class="grid grid-cols-2 gap-3">
                         <div><label class="block text-sm font-bold mb-1">Roll No</label><input type="number" id="editStuRoll" class="w-full border p-2 rounded"></div>
                         <div><label class="block text-sm font-bold mb-1">Student ID</label><input type="text" id="editStuID" class="w-full border p-2 rounded"></div>
@@ -127,7 +160,7 @@
                     </div>
                     <div class="flex justify-end pt-4">
                         <button onclick="toggleModal('editStudentModal')" class="bg-gray-300 text-gray-800 px-4 py-2 rounded mr-2">Cancel</button>
-                        <button onclick="saveEditedStudent()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Update Student</button>
+                        <button onclick="saveEditedStudent()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Update & Save</button>
                     </div>
                 </div>
             </div>
@@ -205,10 +238,31 @@
 
             <div id="dashboardSection" class="section-content">
                 <h1 class="text-2xl font-bold mb-6 text-gray-800">Dashboard</h1>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                <!-- Quick Stats -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div class="bg-white p-6 rounded-lg shadow border-l-4 border-blue-500"><div class="text-gray-500 text-sm">Total Students</div><div class="text-3xl font-bold text-gray-800" id="dashTotalStudents">0</div></div>
                     <div class="bg-white p-6 rounded-lg shadow border-l-4 border-green-500"><div class="text-gray-500 text-sm">Classes</div><div class="text-3xl font-bold text-gray-800" id="dashTotalClasses">0</div></div>
                     <div class="bg-white p-6 rounded-lg shadow border-l-4 border-purple-500"><div class="text-gray-500 text-sm">Exams</div><div class="text-3xl font-bold text-gray-800" id="dashTotalExams">0</div></div>
+                </div>
+
+                <!-- Academic Session Config -->
+                <div class="bg-white p-6 rounded-lg shadow border border-gray-200">
+                    <h3 class="font-bold text-lg text-gray-800 mb-4 border-b pb-2"><i class="fas fa-calendar-check text-blue-600 mr-2"></i>Academic Session Settings</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-600 mb-1">Session Start Date</label>
+                            <input type="date" id="sessionStart" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-200">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-600 mb-1">Session End Date</label>
+                            <input type="date" id="sessionEnd" class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-200">
+                        </div>
+                        <div>
+                            <button onclick="saveSessionDates()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 w-full font-semibold shadow">Save Session Dates</button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-2"><i class="fas fa-info-circle"></i> Once the End Date passes, the system will prompt you to automatically promote students to the next class.</p>
                 </div>
             </div>
 
@@ -228,7 +282,7 @@
                 </div>
             </div>
 
-            <!-- EXAM ROUTINE (NEW) -->
+            <!-- EXAM ROUTINE -->
             <div id="routineSection" class="section-content hidden">
                 <h1 class="text-2xl font-bold mb-6">Exam Routine Configuration</h1>
                 <div class="bg-white p-6 rounded-lg shadow-sm">
@@ -328,10 +382,13 @@
         // Global State
         let db = { 
             schoolName: "", 
-            schoolAddress: "", // NEW
+            schoolAddress: "", 
             classes: [], 
             exams: [],
-            routine: { dates: [], entries: {} } // NEW: stores date headers and class->subjects map
+            routine: { dates: [], entries: {} },
+            sessionStart: "", // New
+            sessionEnd: "",   // New
+            lastPromotedYear: "" // Tracks promotion status
         };
         let currentUser = null;
 
@@ -350,22 +407,27 @@
 
                     if (docSnap.exists) {
                         db = docSnap.data();
-                        // Init new fields if missing
                         if(!db.schoolAddress) db.schoolAddress = "";
                         if(!db.routine) db.routine = { dates: [], entries: {} };
+                        if(!db.alumni) db.alumni = []; // Store graduated students
                         
+                        // Auto-Correction for Name
                         if (db.schoolName === "New School" && user.displayName && user.displayName !== "New School") {
                             db.schoolName = user.displayName;
                             await docRef.update({ schoolName: user.displayName });
                         }
                     } else {
                         const initialName = user.displayName || "New School";
-                        db = { schoolName: initialName, schoolAddress: "", classes: [], exams: [], routine: { dates: ["2025-01-01"], entries: {} } };
+                        db = { schoolName: initialName, schoolAddress: "", classes: [], exams: [], routine: { dates: ["2025-01-01"], entries: {} }, sessionStart: "", sessionEnd: "", lastPromotedYear: "", alumni: [] };
                         await docRef.set(db);
                     }
                     updateUIOnLogin();
                     loginScreen.classList.add('hidden');
                     appLayout.classList.remove('hidden');
+                    
+                    // CHECK AUTO PROMOTION STATUS
+                    checkAutoPromotion();
+
                 } catch (error) {
                     console.error(error);
                     alert("Error loading data.");
@@ -379,85 +441,81 @@
             }
         });
 
-        async function handleLogin(e) { e.preventDefault(); /* ... same as before ... */ 
-            const email = document.getElementById('loginEmail').value;
-            const pass = document.getElementById('loginPassword').value;
-            try {
-                document.getElementById('loadingOverlay').classList.remove('hidden');
-                await auth.signInWithEmailAndPassword(email, pass);
-            } catch (error) {
-                document.getElementById('loadingOverlay').classList.add('hidden');
-                document.getElementById('authError').textContent = error.message;
-                document.getElementById('authError').classList.remove('hidden');
-            }
+        // --- SESSION & PROMOTION LOGIC ---
+        function saveSessionDates() {
+            db.sessionStart = document.getElementById('sessionStart').value;
+            db.sessionEnd = document.getElementById('sessionEnd').value;
+            saveData();
         }
-        
-        async function handleRegister(e) { e.preventDefault(); /* ... same ... */
-            const name = document.getElementById('regSchoolName').value;
-            const email = document.getElementById('regEmail').value;
-            const pass = document.getElementById('regPassword').value;
-            const confirm = document.getElementById('regConfirmPassword').value;
-            if (pass !== confirm) return alert("Passwords mismatch");
-            try {
-                document.getElementById('loadingOverlay').classList.remove('hidden');
-                const userCredential = await auth.createUserWithEmailAndPassword(email, pass);
-                await userCredential.user.updateProfile({ displayName: name });
-                db = { schoolName: name, schoolAddress: "", classes: [], exams: [], routine: { dates: ["2025-01-01"], entries: {} } };
-                await dbFirestore.collection('artifacts').doc(APP_ID).collection('users').doc(userCredential.user.uid).collection('school_data').doc('main').set(db);
-                updateUIOnLogin();
-            } catch (error) {
-                document.getElementById('loadingOverlay').classList.add('hidden');
-                document.getElementById('authError').textContent = error.message;
-                document.getElementById('authError').classList.remove('hidden');
+
+        function checkAutoPromotion() {
+            if (!db.sessionEnd) return;
+            
+            const today = new Date();
+            const endDate = new Date(db.sessionEnd);
+            const currentYear = endDate.getFullYear();
+
+            // If today is past end date AND we haven't promoted for this year yet
+            if (today > endDate && db.lastPromotedYear != currentYear) {
+                toggleModal('promotionModal');
             }
         }
 
-        function handleLogout() { auth.signOut(); }
-        function switchTab(tab) { /* ... same ... */
-            if (tab === 'login') {
-                document.getElementById('loginForm').classList.remove('hidden');
-                document.getElementById('registerForm').classList.add('hidden');
-            } else {
-                document.getElementById('loginForm').classList.add('hidden');
-                document.getElementById('registerForm').classList.remove('hidden');
-            }
-        }
+        async function executePromotion() {
+            const endDate = new Date(db.sessionEnd);
+            const currentYear = endDate.getFullYear();
+            
+            // Backup before destructive action? We rely on Firebase for now.
+            
+            // Logic: Iterate classes backwards
+            // Class[N] students move to Alumni (or drop out if no Alumni list)
+            // Class[i] students move to Class[i+1]
+            // Class[0] students cleared
+            
+            const classesCount = db.classes.length;
+            if(classesCount > 0) {
+                // 1. Move last class to Alumni
+                const graduatingStudents = db.classes[classesCount - 1].students;
+                if(!db.alumni) db.alumni = [];
+                // Add passing year to record
+                const grads = graduatingStudents.map(s => ({...s, year: currentYear, class: db.classes[classesCount-1].name}));
+                db.alumni = [...db.alumni, ...grads];
 
-        // --- PROFILE EDIT ---
-        async function editSchoolProfile() {
-            const name = prompt("Edit School Name:", db.schoolName);
-            if (name !== null) {
-                const address = prompt("Edit School Address:", db.schoolAddress || "");
-                if (address !== null) {
-                    db.schoolName = name.trim();
-                    db.schoolAddress = address.trim();
-                    updateUIOnLogin();
-                    await saveData();
+                // 2. Shift students up
+                for (let i = classesCount - 1; i > 0; i--) {
+                    // Deep copy students from lower class
+                    // Reset marks for new year
+                    const promotedStudents = db.classes[i-1].students.map(s => ({
+                        ...s,
+                        marks: {} // Clear marks
+                    }));
+                    db.classes[i].students = promotedStudents;
                 }
+
+                // 3. Clear first class (Entry level)
+                db.classes[0].students = [];
+                
+                // 4. Update flag
+                db.lastPromotedYear = currentYear;
+                
+                await saveData();
+                toggleModal('promotionModal');
+                alert("Promotion Successful! Students have moved to the next class.");
+                renderStudentList();
+                updateStats();
             }
         }
 
-        async function saveData() {
-            if (!currentUser) return;
-            await dbFirestore.collection('artifacts').doc(APP_ID).collection('users').doc(currentUser.uid).collection('school_data').doc('main').set(db);
-            showToast();
-            updateStats();
-        }
-
-        function showToast() { const t = document.getElementById('toast'); t.classList.remove('translate-x-full'); setTimeout(() => t.classList.add('translate-x-full'), 2000); }
-
-        function updateUIOnLogin() {
-            document.getElementById('ribbonSchoolName').textContent = db.schoolName;
-            document.getElementById('displaySchoolName').textContent = db.schoolName;
-            document.getElementById('displaySchoolAddress').textContent = db.schoolAddress || "Add Address";
-            document.getElementById('welcomeRibbon').classList.remove('hidden');
-            updateStats();
-            renderTags();
-            renderExams();
-            populateDropdowns();
-            renderRoutineTable(); // New
-        }
-
+        // --- AUTH & COMMON ---
+        async function handleLogin(e) { e.preventDefault(); /*...*/ const email=document.getElementById('loginEmail').value; const pass=document.getElementById('loginPassword').value; try{document.getElementById('loadingOverlay').classList.remove('hidden'); await auth.signInWithEmailAndPassword(email, pass);}catch(e){document.getElementById('loadingOverlay').classList.add('hidden'); document.getElementById('authError').textContent=e.message; document.getElementById('authError').classList.remove('hidden');} }
+        async function handleRegister(e) { e.preventDefault(); /*...*/ const name=document.getElementById('regSchoolName').value; const email=document.getElementById('regEmail').value; const pass=document.getElementById('regPassword').value; const confirm=document.getElementById('regConfirmPassword').value; if(pass!==confirm)return alert("Passwords mismatch"); try{document.getElementById('loadingOverlay').classList.remove('hidden'); const cred=await auth.createUserWithEmailAndPassword(email, pass); await cred.user.updateProfile({displayName:name}); db={schoolName:name, schoolAddress:"", classes:[], exams:[], routine:{dates:["2025-01-01"], entries:{}}, sessionStart:"", sessionEnd:"", lastPromotedYear:"", alumni:[]}; await dbFirestore.collection('artifacts').doc(APP_ID).collection('users').doc(cred.user.uid).collection('school_data').doc('main').set(db); updateUIOnLogin();}catch(e){document.getElementById('loadingOverlay').classList.add('hidden'); document.getElementById('authError').textContent=e.message; document.getElementById('authError').classList.remove('hidden');} }
+        function handleLogout(){auth.signOut();}
+        function switchTab(tab){if(tab==='login'){document.getElementById('loginForm').classList.remove('hidden');document.getElementById('registerForm').classList.add('hidden');}else{document.getElementById('loginForm').classList.add('hidden');document.getElementById('registerForm').classList.remove('hidden');}}
+        async function editSchoolProfile(){const name=prompt("Edit School Name:",db.schoolName);if(name!==null){const address=prompt("Edit School Address:",db.schoolAddress||"");if(address!==null){db.schoolName=name.trim();db.schoolAddress=address.trim();updateUIOnLogin();await saveData();}}}
+        async function saveData(){if(!currentUser)return;await dbFirestore.collection('artifacts').doc(APP_ID).collection('users').doc(currentUser.uid).collection('school_data').doc('main').set(db);showToast();updateStats();}
+        function showToast(){const t=document.getElementById('toast');t.classList.remove('translate-x-full');setTimeout(()=>t.classList.add('translate-x-full'),2000);}
+        function updateUIOnLogin(){document.getElementById('ribbonSchoolName').textContent=db.schoolName;document.getElementById('displaySchoolName').textContent=db.schoolName;document.getElementById('displaySchoolAddress').textContent=db.schoolAddress||"Add Address";document.getElementById('sessionStart').value=db.sessionStart||"";document.getElementById('sessionEnd').value=db.sessionEnd||"";document.getElementById('welcomeRibbon').classList.remove('hidden');updateStats();renderTags();renderExams();populateDropdowns();renderRoutineTable();}
+        
         // --- ROUTINE LOGIC ---
         function renderRoutineTable() {
             const table = document.getElementById('routineTable');
@@ -483,61 +541,95 @@
             table.innerHTML = thead + tbody;
         }
 
-        window.addRoutineDate = () => {
-            if(!db.routine) db.routine = { dates: [], entries: {} };
-            db.routine.dates.push(new Date().toISOString().split('T')[0]);
-            renderRoutineTable();
-        };
-
-        window.removeRoutineDate = () => {
-            if(db.routine.dates.length > 0) {
-                db.routine.dates.pop();
-                // Also clean up entries if needed, but not strictly necessary as rendering relies on dates length
-                renderRoutineTable();
-            }
-        };
-
+        window.addRoutineDate = () => { if(!db.routine) db.routine={dates:[],entries:{}}; db.routine.dates.push(new Date().toISOString().split('T')[0]); renderRoutineTable(); };
+        window.removeRoutineDate = () => { if(db.routine.dates.length>0){db.routine.dates.pop(); renderRoutineTable();} };
         window.updateRoutineDate = (idx, val) => { db.routine.dates[idx] = val; };
-        
-        window.updateRoutineSubject = (clsName, dateIdx, val) => {
-            if(!db.routine.entries[clsName]) db.routine.entries[clsName] = [];
-            db.routine.entries[clsName][dateIdx] = val;
-        };
-
+        window.updateRoutineSubject = (clsName, dateIdx, val) => { if(!db.routine.entries[clsName]) db.routine.entries[clsName]=[]; db.routine.entries[clsName][dateIdx]=val; };
         window.saveRoutine = () => { saveData(); };
 
         // --- APP FUNCTIONS ---
-        function showSection(id) {
-            document.querySelectorAll('.section-content').forEach(e => e.classList.add('hidden'));
-            document.getElementById(id).classList.remove('hidden');
-            if(id === 'routineSection') renderRoutineTable();
-        }
+        function showSection(id){document.querySelectorAll('.section-content').forEach(e=>e.classList.add('hidden'));document.getElementById(id).classList.remove('hidden');if(id==='routineSection')renderRoutineTable();}
+        function updateStats(){document.getElementById('dashTotalStudents').textContent=db.classes.reduce((a,c)=>a+c.students.length,0);document.getElementById('dashTotalClasses').textContent=db.classes.length;document.getElementById('dashTotalExams').textContent=db.exams.length;}
+        window.addClass=()=>{const name=document.getElementById('newClassName').value.trim();if(!name)return;db.classes.push({name,students:[],subjects:[],marksConfig:{}});document.getElementById('newClassName').value='';saveData();renderTags();populateDropdowns();renderRoutineTable();};
+        window.renderTags=()=>{document.getElementById('classListContainer').innerHTML=db.classes.map(c=>`<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm border border-blue-200">${c.name}</span>`).join('');};
+        window.addStudent=()=>{const clsIdx=document.getElementById('studentClassSelect').selectedIndex-1;if(clsIdx<0)return alert("Select Class");const name=document.getElementById('stuName').value;const roll=document.getElementById('stuRoll').value;if(!name||!roll)return alert("Required");db.classes[clsIdx].students.push({name,roll,id:document.getElementById('stuID').value,father:document.getElementById('stuFather').value,marks:{},extra:{dob:'',phone:'',address:''}});db.classes[clsIdx].students.sort((a,b)=>a.roll-b.roll);saveData();renderStudentList();document.getElementById('stuName').value='';document.getElementById('stuFather').value='';document.getElementById('stuID').value='';document.getElementById('stuRoll').value='';};
+        window.renderStudentList=()=>{const ci=document.getElementById('studentClassSelect').selectedIndex-1;if(ci<0)return document.getElementById('studentTableBody').innerHTML='';document.getElementById('studentTableBody').innerHTML=db.classes[ci].students.map((s,i)=>`<tr class="border-b"><td class="px-4 py-2">${s.roll}</td><td class="px-4 py-2">${s.name}</td><td class="px-4 py-2">${s.father}</td><td class="px-4 py-2 flex gap-2"><button onclick="editStudent(${ci},${i})" class="text-blue-600"><i class="fas fa-edit"></i></button><button onclick="delStu(${ci},${i})" class="text-red-600"><i class="fas fa-trash"></i></button></td></tr>`).join('');};
+        window.delStu=(ci,si)=>{if(confirm("Delete?")){db.classes[ci].students.splice(si,1);saveData();renderStudentList();}};
+        
+        // --- EDIT STUDENT (UPDATED) ---
+        window.editStudent = (ci, si) => { 
+            const s = db.classes[ci].students[si]; 
+            document.getElementById('editStuClassIdx').value=ci; 
+            document.getElementById('editStuIdx').value=si; 
+            document.getElementById('editStuName').value=s.name; 
+            document.getElementById('editStuFather').value=s.father; 
+            document.getElementById('editStuRoll').value=s.roll; 
+            document.getElementById('editStuID').value=s.id; 
+            if(!s.extra)s.extra={dob:'',phone:'',address:''}; 
+            document.getElementById('editStuDOB').value=s.extra.dob||''; 
+            document.getElementById('editStuPhone').value=s.extra.phone||''; 
+            document.getElementById('editStuAddress').value=s.extra.address||''; 
+            
+            // Populate Class Dropdown
+            const clsSelect = document.getElementById('editStuClassSelect');
+            clsSelect.innerHTML = db.classes.map((c, idx) => `<option value="${idx}" ${idx === ci ? 'selected' : ''}>${c.name}</option>`).join('');
+            
+            toggleModal('editStudentModal'); 
+        };
 
-        function updateStats() {
-            document.getElementById('dashTotalStudents').textContent = db.classes.reduce((a,c)=>a+c.students.length,0);
-            document.getElementById('dashTotalClasses').textContent = db.classes.length;
-            document.getElementById('dashTotalExams').textContent = db.exams.length;
-        }
+        window.saveEditedStudent = () => { 
+            const originalCi = parseInt(document.getElementById('editStuClassIdx').value);
+            const si = parseInt(document.getElementById('editStuIdx').value);
+            const newCi = parseInt(document.getElementById('editStuClassSelect').value);
+            
+            // Get current student object
+            const s = db.classes[originalCi].students[si];
+            
+            // Update fields
+            s.name = document.getElementById('editStuName').value;
+            s.father = document.getElementById('editStuFather').value;
+            s.roll = document.getElementById('editStuRoll').value;
+            s.id = document.getElementById('editStuID').value;
+            s.extra = {
+                dob: document.getElementById('editStuDOB').value,
+                phone: document.getElementById('editStuPhone').value,
+                address: document.getElementById('editStuAddress').value
+            };
 
-        // Classes/Students/Exams/Marks logic (Same as before)
-        window.addClass = () => { /*...*/ const name = document.getElementById('newClassName').value.trim(); if(!name) return; db.classes.push({ name, students: [], subjects: [], marksConfig: {} }); document.getElementById('newClassName').value=''; saveData(); renderTags(); populateDropdowns(); renderRoutineTable(); };
-        window.renderTags = () => { document.getElementById('classListContainer').innerHTML = db.classes.map(c => `<span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm border border-blue-200">${c.name}</span>`).join(''); };
-        window.addStudent = () => { /*...*/ const clsIdx = document.getElementById('studentClassSelect').selectedIndex - 1; if(clsIdx<0)return alert("Select Class"); const name=document.getElementById('stuName').value; const roll=document.getElementById('stuRoll').value; if(!name||!roll)return alert("Required"); db.classes[clsIdx].students.push({name, roll, id:document.getElementById('stuID').value, father:document.getElementById('stuFather').value, marks:{}, extra:{dob:'',phone:'',address:''}}); db.classes[clsIdx].students.sort((a,b)=>a.roll-b.roll); saveData(); renderStudentList(); document.getElementById('stuName').value=''; document.getElementById('stuFather').value=''; document.getElementById('stuID').value=''; document.getElementById('stuRoll').value=''; };
-        window.renderStudentList = () => { const ci = document.getElementById('studentClassSelect').selectedIndex - 1; if(ci<0) return document.getElementById('studentTableBody').innerHTML=''; document.getElementById('studentTableBody').innerHTML = db.classes[ci].students.map((s,i) => `<tr class="border-b"><td class="px-4 py-2">${s.roll}</td><td class="px-4 py-2">${s.name}</td><td class="px-4 py-2">${s.father}</td><td class="px-4 py-2 flex gap-2"><button onclick="editStudent(${ci},${i})" class="text-blue-600"><i class="fas fa-edit"></i></button><button onclick="delStu(${ci},${i})" class="text-red-600"><i class="fas fa-trash"></i></button></td></tr>`).join(''); };
-        window.delStu = (ci, si) => { if(confirm("Delete?")) { db.classes[ci].students.splice(si,1); saveData(); renderStudentList(); } };
-        window.editStudent = (ci, si) => { const s = db.classes[ci].students[si]; document.getElementById('editStuClassIdx').value=ci; document.getElementById('editStuIdx').value=si; document.getElementById('editStuName').value=s.name; document.getElementById('editStuFather').value=s.father; document.getElementById('editStuRoll').value=s.roll; document.getElementById('editStuID').value=s.id; if(!s.extra)s.extra={dob:'',phone:'',address:''}; document.getElementById('editStuDOB').value=s.extra.dob||''; document.getElementById('editStuPhone').value=s.extra.phone||''; document.getElementById('editStuAddress').value=s.extra.address||''; toggleModal('editStudentModal'); };
-        window.saveEditedStudent = () => { const ci=document.getElementById('editStuClassIdx').value; const si=document.getElementById('editStuIdx').value; const s=db.classes[ci].students[si]; s.name=document.getElementById('editStuName').value; s.father=document.getElementById('editStuFather').value; s.roll=document.getElementById('editStuRoll').value; s.id=document.getElementById('editStuID').value; s.extra={dob:document.getElementById('editStuDOB').value,phone:document.getElementById('editStuPhone').value,address:document.getElementById('editStuAddress').value}; db.classes[ci].students.sort((a,b)=>a.roll-b.roll); saveData(); toggleModal('editStudentModal'); renderStudentList(); };
-        window.toggleModal = (id) => { document.getElementById(id).classList.toggle('opacity-0'); document.getElementById(id).classList.toggle('pointer-events-none'); };
-        window.addExam = () => { const name = document.getElementById('examName').value; if(!name) return; db.exams.push({name}); document.getElementById('examName').value=''; saveData(); renderExams(); populateDropdowns(); };
-        window.renderExams = () => { document.getElementById('examList').innerHTML = db.exams.map((e,i)=>`<li class="flex justify-between bg-gray-50 p-2 border rounded"><span>${e.name}</span><button class="text-red-500" onclick="delExam(${i})">x</button></li>`).join(''); };
-        window.delExam = (i) => { db.exams.splice(i,1); saveData(); renderExams(); populateDropdowns(); };
-        window.loadClassSubjects = () => { const i = document.getElementById('configClassSelect').selectedIndex - 1; if(i>=0) document.getElementById('classSubjectsInput').value = (db.classes[i].subjects||[]).join(', '); };
-        window.saveClassSubjects = () => { const i = document.getElementById('configClassSelect').selectedIndex - 1; if(i<0) return; db.classes[i].subjects = document.getElementById('classSubjectsInput').value.split(',').map(s=>s.trim()).filter(s=>s); saveData(); };
-        window.renderMaxMarksGrid = () => { const ci = document.getElementById('configClassSelect').selectedIndex - 1; if(ci<0) return; const cls=db.classes[ci]; let h=`<table class="w-full text-sm border-collapse"><thead><tr class="bg-gray-100"><th class="border p-2">Subject</th>`+db.exams.map(e=>`<th class="border p-2">${e.name}</th>`).join('')+`</tr></thead><tbody>`; cls.subjects.forEach(sub=>{ h+=`<tr><td class="border p-2 font-bold">${sub}</td>`+db.exams.map(e=>`<td class="border p-1"><input type="number" class="config-max-input w-full p-1 border text-center" data-exam="${e.name}" data-sub="${sub}" value="${(cls.marksConfig&&cls.marksConfig[e.name]&&cls.marksConfig[e.name][sub])||100}"></td>`).join('')+`</tr>`; }); document.getElementById('maxMarksGridContainer').innerHTML=h+`</tbody></table>`; document.getElementById('maxMarksGridContainer').classList.remove('hidden'); document.getElementById('saveMaxMarksBtn').classList.remove('hidden'); };
-        window.saveMaxMarksConfig = () => { const ci=document.getElementById('configClassSelect').selectedIndex-1; if(!db.classes[ci].marksConfig) db.classes[ci].marksConfig={}; document.querySelectorAll('.config-max-input').forEach(i=>{ const e=i.dataset.exam, s=i.dataset.sub; if(!db.classes[ci].marksConfig[e]) db.classes[ci].marksConfig[e]={}; db.classes[ci].marksConfig[e][s]=parseInt(i.value)||0; }); saveData(); };
-        window.loadMarksTable = () => { const ci=document.getElementById('markClassSelect').selectedIndex-1; const ei=document.getElementById('markExamSelect').selectedIndex-1; if(ci<0||ei<0)return; const cls=db.classes[ci], en=db.exams[ei].name; let h=`<table class="w-full border-collapse text-sm"><thead><tr class="bg-gray-200"><th class="border p-2">Roll</th><th class="border p-2">Name</th>`+cls.subjects.map(s=>`<th class="border p-2">${s} /${(cls.marksConfig&&cls.marksConfig[en]&&cls.marksConfig[en][s])||100}</th>`).join('')+`</tr></thead><tbody>`; cls.students.forEach((s,i)=>{ h+=`<tr><td class="border p-2 font-bold">${s.roll}</td><td class="border p-2">${s.name}</td>`+cls.subjects.map(sub=>`<td class="border p-1"><input type="number" class="mark-input w-full p-1 border text-center" data-si="${i}" data-sub="${sub}" value="${(s.marks[en]&&s.marks[en][sub])!==undefined?s.marks[en][sub]:''}"></td>`).join('')+`</tr>`; }); document.getElementById('marksTableContainer').innerHTML=h+`</tbody></table>`; document.getElementById('saveMarksBtnContainer').classList.remove('hidden'); };
-        window.saveMarks = () => { const ci=document.getElementById('markClassSelect').selectedIndex-1; const ei=document.getElementById('markExamSelect').selectedIndex-1; const en=db.exams[ei].name; document.querySelectorAll('.mark-input').forEach(i=>{ const si=i.dataset.si, sub=i.dataset.sub; if(!db.classes[ci].students[si].marks[en]) db.classes[ci].students[si].marks[en]={}; if(i.value!=='') db.classes[ci].students[si].marks[en][sub]=parseFloat(i.value); }); saveData(); };
-        window.populateDropdowns = () => { const cOpt=`<option value="">-- Select --</option>`+db.classes.map((c,i)=>`<option value="${i}">${c.name}</option>`).join(''); ['studentClassSelect','markClassSelect','reportClassSelect','configClassSelect','admitClassSelect','rankClassSelect'].forEach(id=>{if(document.getElementById(id))document.getElementById(id).innerHTML=cOpt}); const eOpt=`<option value="">-- Select --</option>`+db.exams.map((e,i)=>`<option value="${i}">${e.name}</option>`).join(''); document.getElementById('markExamSelect').innerHTML=eOpt; if(document.getElementById('reportExamSelect')) document.getElementById('reportExamSelect').innerHTML=eOpt; };
+            // Handle Class Change
+            if (originalCi !== newCi) {
+                // Remove from old class
+                db.classes[originalCi].students.splice(si, 1);
+                // Add to new class
+                db.classes[newCi].students.push(s);
+                // Sort new class
+                db.classes[newCi].students.sort((a,b) => a.roll - b.roll);
+                // Refresh list if we are currently viewing either class
+                const currentViewClass = document.getElementById('studentClassSelect').selectedIndex - 1;
+                if (currentViewClass === originalCi || currentViewClass === newCi) {
+                    renderStudentList();
+                }
+            } else {
+                // Same class, just re-sort
+                db.classes[originalCi].students.sort((a,b) => a.roll - b.roll);
+                renderStudentList();
+            }
+
+            saveData(); 
+            toggleModal('editStudentModal'); 
+        };
+
+        window.toggleModal=(id)=>{document.getElementById(id).classList.toggle('opacity-0');document.getElementById(id).classList.toggle('pointer-events-none');};
+        window.addExam=()=>{const name=document.getElementById('examName').value;if(!name)return;db.exams.push({name});document.getElementById('examName').value='';saveData();renderExams();populateDropdowns();};
+        window.renderExams=()=>{document.getElementById('examList').innerHTML=db.exams.map((e,i)=>`<li class="flex justify-between bg-gray-50 p-2 border rounded"><span>${e.name}</span><button class="text-red-500" onclick="delExam(${i})">x</button></li>`).join('');};
+        window.delExam=(i)=>{db.exams.splice(i,1);saveData();renderExams();populateDropdowns();};
+        window.loadClassSubjects=()=>{const i=document.getElementById('configClassSelect').selectedIndex-1;if(i>=0)document.getElementById('classSubjectsInput').value=(db.classes[i].subjects||[]).join(', ');};
+        window.saveClassSubjects=()=>{const i=document.getElementById('configClassSelect').selectedIndex-1;if(i<0)return;db.classes[i].subjects=document.getElementById('classSubjectsInput').value.split(',').map(s=>s.trim()).filter(s=>s);saveData();};
+        window.renderMaxMarksGrid=()=>{const ci=document.getElementById('configClassSelect').selectedIndex-1;if(ci<0)return;const cls=db.classes[ci];let h=`<table class="w-full text-sm border-collapse"><thead><tr class="bg-gray-100"><th class="border p-2">Subject</th>`+db.exams.map(e=>`<th class="border p-2">${e.name}</th>`).join('')+`</tr></thead><tbody>`;cls.subjects.forEach(sub=>{h+=`<tr><td class="border p-2 font-bold">${sub}</td>`+db.exams.map(e=>`<td class="border p-1"><input type="number" class="config-max-input w-full p-1 border text-center" data-exam="${e.name}" data-sub="${sub}" value="${(cls.marksConfig&&cls.marksConfig[e.name]&&cls.marksConfig[e.name][sub])||100}"></td>`).join('')+`</tr>`;});document.getElementById('maxMarksGridContainer').innerHTML=h+`</tbody></table>`;document.getElementById('maxMarksGridContainer').classList.remove('hidden');document.getElementById('saveMaxMarksBtn').classList.remove('hidden');};
+        window.saveMaxMarksConfig=()=>{const ci=document.getElementById('configClassSelect').selectedIndex-1;if(!db.classes[ci].marksConfig)db.classes[ci].marksConfig={};document.querySelectorAll('.config-max-input').forEach(i=>{const e=i.dataset.exam,s=i.dataset.sub;if(!db.classes[ci].marksConfig[e])db.classes[ci].marksConfig[e]={};db.classes[ci].marksConfig[e][s]=parseInt(i.value)||0;});saveData();};
+        window.loadMarksTable=()=>{const ci=document.getElementById('markClassSelect').selectedIndex-1;const ei=document.getElementById('markExamSelect').selectedIndex-1;if(ci<0||ei<0)return;const cls=db.classes[ci],en=db.exams[ei].name;let h=`<table class="w-full border-collapse text-sm"><thead><tr class="bg-gray-200"><th class="border p-2">Roll</th><th class="border p-2">Name</th>`+cls.subjects.map(s=>`<th class="border p-2">${s} /${(cls.marksConfig&&cls.marksConfig[en]&&cls.marksConfig[en][s])||100}</th>`).join('')+`</tr></thead><tbody>`;cls.students.forEach((s,i)=>{h+=`<tr><td class="border p-2 font-bold">${s.roll}</td><td class="border p-2">${s.name}</td>`+cls.subjects.map(sub=>`<td class="border p-1"><input type="number" class="mark-input w-full p-1 border text-center" data-si="${i}" data-sub="${sub}" value="${(s.marks[en]&&s.marks[en][sub])!==undefined?s.marks[en][sub]:''}"></td>`).join('')+`</tr>`;});document.getElementById('marksTableContainer').innerHTML=h+`</tbody></table>`;document.getElementById('saveMarksBtnContainer').classList.remove('hidden');};
+        window.saveMarks=()=>{const ci=document.getElementById('markClassSelect').selectedIndex-1;const ei=document.getElementById('markExamSelect').selectedIndex-1;const en=db.exams[ei].name;document.querySelectorAll('.mark-input').forEach(i=>{const si=i.dataset.si,sub=i.dataset.sub;if(!db.classes[ci].students[si].marks[en])db.classes[ci].students[si].marks[en]={};if(i.value!=='')db.classes[ci].students[si].marks[en][sub]=parseFloat(i.value);});saveData();};
+        window.populateDropdowns=()=>{const cOpt=`<option value="">-- Select --</option>`+db.classes.map((c,i)=>`<option value="${i}">${c.name}</option>`).join('');['studentClassSelect','markClassSelect','reportClassSelect','configClassSelect','admitClassSelect','rankClassSelect'].forEach(id=>{if(document.getElementById(id))document.getElementById(id).innerHTML=cOpt});const eOpt=`<option value="">-- Select --</option>`+db.exams.map((e,i)=>`<option value="${i}">${e.name}</option>`).join('');document.getElementById('markExamSelect').innerHTML=eOpt;if(document.getElementById('reportExamSelect'))document.getElementById('reportExamSelect').innerHTML=eOpt;};
         
         // --- ADMIT CARD GENERATOR (Updated with Address & Routine) ---
         window.generateAdmitCards = () => {
@@ -590,8 +682,8 @@
                 });
                 html += `</div></div>`;
             }
-            document.getElementById('admitPreviewArea').innerHTML = html;
-            document.getElementById('printContainer').innerHTML = html; 
+            document.getElementById('admitPreviewArea').innerHTML=html;
+            document.getElementById('printContainer').innerHTML=html;
             document.getElementById('admitPreviewWrapper').classList.remove('hidden');
             document.getElementById('admitPrintBtn').classList.remove('hidden');
         };
@@ -668,11 +760,13 @@
             let html = `<div class="a4-paper"><div class="text-center border-b-2 border-gray-800 pb-2 mb-4"><h1 class="text-2xl font-bold uppercase">${db.schoolName}</h1>${addressBlock}<p class="text-sm text-gray-600 mt-1">Class Mark Sheet | Exam: ${exam.name} | Class: ${cls.name}</p></div><table class="w-full text-xs border-collapse border border-gray-400 text-center"><thead><tr class="bg-gray-200 font-bold"><th class="border border-gray-400 p-1">Roll</th><th class="border border-gray-400 p-1 text-left">Name</th>` + cls.subjects.map(s=>`<th class="border border-gray-400 p-1">${s}</th>`).join('') + `<th class="border border-gray-400 p-1">Total</th><th class="border border-gray-400 p-1">%</th><th class="border border-gray-400 p-1">Rank</th></tr></thead><tbody>`;
             
             let studentsWithScores = cls.students.map(s => {
-                let totalObt = 0, totalMax = 0;
+                let totalObt = 0;
+                let totalMax = 0;
                 cls.subjects.forEach(sub => {
                     const obt = (s.marks[exam.name] && s.marks[exam.name][sub]) || 0;
                     const max = (cls.marksConfig && cls.marksConfig[exam.name] && cls.marksConfig[exam.name][sub]) || 100;
-                    totalObt += obt; totalMax += max;
+                    totalObt += obt;
+                    totalMax += max;
                 });
                 return { ...s, totalObt, totalMax, pct: totalMax > 0 ? (totalObt/totalMax)*100 : 0 };
             }).sort((a, b) => b.totalObt - a.totalObt);
@@ -681,8 +775,8 @@
                 html += `<tr><td class="border border-gray-400 p-1">${s.roll}</td><td class="border border-gray-400 p-1 text-left">${s.name}</td>` + cls.subjects.map(sub=>`<td class="border border-gray-400 p-1">${(s.marks[exam.name]&&s.marks[exam.name][sub])!==undefined?s.marks[exam.name][sub]:'-'}</td>`).join('') + `<td class="border border-gray-400 p-1 font-bold">${s.totalObt}</td><td class="border border-gray-400 p-1">${s.pct.toFixed(1)}%</td><td class="border border-gray-400 p-1 font-bold">#${idx+1}</td></tr>`;
             });
             html += `</tbody></table><div class="flex justify-between w-full mt-10 px-10"><div class="text-center"><div class="w-32 border-t border-gray-800 mb-1"></div><div class="text-xs">Teacher</div></div><div class="text-center"><div class="w-32 border-t border-gray-800 mb-1"></div><div class="text-xs">Principal</div></div></div></div>`;
-            document.getElementById('previewArea').innerHTML = html;
-            document.getElementById('printContainer').innerHTML = html;
+            document.getElementById('previewArea').innerHTML=html;
+            document.getElementById('printContainer').innerHTML=html;
         };
         
         window.generateRankList = () => {
@@ -710,14 +804,14 @@
                     <thead><tr class="bg-gray-200"><th class="border border-gray-400 p-2">Rank</th><th class="border border-gray-400 p-2">Roll</th><th class="border border-gray-400 p-2 text-left">Student Name</th><th class="border border-gray-400 p-2">Total Marks</th><th class="border border-gray-400 p-2">Obtained</th><th class="border border-gray-400 p-2">%</th></tr></thead>
                     <tbody>`;
             rankedList.forEach((s, idx) => {
-                html += `<tr><td class="border border-gray-400 p-2 text-center font-bold">${idx + 1}</td><td class="border border-gray-400 p-2 text-center">${s.roll}</td><td class="border border-gray-400 p-2">${s.name}</td><td class="border border-gray-400 p-2 text-center">${s.grandTotalMax}</td><td class="border border-gray-400 p-2 text-center font-bold">${s.grandTotalObt}</td><td class="border border-gray-400 p-2 text-center">${s.pct.toFixed(1)}%</td></tr>`;
+                html += `<tr><td class="border border-gray-400 p-2 text-center font-bold">${idx+1}</td><td class="border border-gray-400 p-2 text-center">${s.roll}</td><td class="border border-gray-400 p-2">${s.name}</td><td class="border border-gray-400 p-2 text-center">${s.grandTotalMax}</td><td class="border border-gray-400 p-2 text-center font-bold">${s.grandTotalObt}</td><td class="border border-gray-400 p-2 text-center">${s.pct.toFixed(1)}%</td></tr>`;
             });
             html += `</tbody></table><div class="text-right text-xs text-gray-400 mt-4">Generated on ${new Date().toLocaleDateString()}</div></div>`;
-            document.getElementById('rankListPreview').innerHTML = html;
+            document.getElementById('rankListPreview').innerHTML=html;
             document.getElementById('rankListPreview').classList.remove('hidden');
-            document.getElementById('printContainer').innerHTML = html;
+            document.getElementById('printContainer').innerHTML=html;
             document.getElementById('printRankBtn').classList.remove('hidden');
-        }
+        };
     </script>
 </body>
 </html>
