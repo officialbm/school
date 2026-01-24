@@ -40,6 +40,7 @@
         ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
 
+        /* Default A4 Portrait */
         .a4-paper {
             width: 210mm;
             min-height: 297mm;
@@ -49,6 +50,13 @@
             padding: 10mm;
             position: relative;
             box-sizing: border-box;
+        }
+
+        /* Landscape A4 Class */
+        .a4-landscape {
+            width: 297mm;
+            min-height: 210mm;
+            padding: 10mm;
         }
 
         .admit-grid {
@@ -75,16 +83,48 @@
         .loader { border-top-color: #3498db; -webkit-animation: spinner 1.5s linear infinite; animation: spinner 1.5s linear infinite; }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+        /* --- ROBUST PRINT STYLES --- */
         @media print {
-            @page { size: A4; margin: 0; }
-            body > *:not(#printContainer) { display: none !important; }
-            #printContainer { display: block !important; }
-            #printContainer .a4-paper {
-                width: 100%; height: 100vh; box-shadow: none; margin: 0; padding: 10mm;
-                page-break-after: always;
+            /* Hide everything by default */
+            body > * { 
+                display: none !important; 
             }
-            #printContainer .a4-paper:last-child { page-break-after: auto; }
-            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            
+            /* Only show the print container */
+            body > #printContainer { 
+                display: block !important; 
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 0;
+                background: white;
+            }
+
+            /* Ensure children of print container are visible and layed out correctly */
+            #printContainer * {
+                visibility: visible;
+            }
+            
+            .a4-paper {
+                margin: 0;
+                box-shadow: none;
+                page-break-after: always;
+                width: 100%;
+                height: 100%;
+            }
+
+            /* Default Page Rule */
+            @page { size: A4; margin: 0; }
+        }
+
+        /* Landscape Print Specifics */
+        @media print {
+            body.landscape-mode #printContainer .a4-paper {
+                width: 100%; 
+                /* height: 100%; landscape usually handles height implicitly */
+            }
         }
         
         #printContainer { display: none; }
@@ -218,7 +258,7 @@
                 <ul class="space-y-1 px-2">
                     <li><button onclick="showSection('dashboardSection')" class="nav-btn w-full text-left px-4 py-3 rounded hover:bg-blue-50 text-gray-600"><i class="fas fa-th-large w-5"></i> Dashboard</button></li>
                     <li><button onclick="showSection('studentMasterSection')" class="nav-btn w-full text-left px-4 py-3 rounded hover:bg-blue-50 text-gray-600"><i class="fas fa-users w-5"></i> Student Master</button></li>
-                    <li><button onclick="showSection('examConfigSection')" class="nav-btn w-full text-left px-4 py-3 rounded hover:bg-blue-50 text-gray-600"><i class="fas fa-cog w-5"></i> Exam & Subject creation</button></li>
+                    <li><button onclick="showSection('examConfigSection')" class="nav-btn w-full text-left px-4 py-3 rounded hover:bg-blue-50 text-gray-600"><i class="fas fa-cog w-5"></i> Result Config</button></li>
                     <li><button onclick="showSection('routineSection')" class="nav-btn w-full text-left px-4 py-3 rounded hover:bg-blue-50 text-gray-600"><i class="fas fa-calendar-alt w-5"></i> Exam Routine</button></li>
                     <li><button onclick="showSection('marksEntrySection')" class="nav-btn w-full text-left px-4 py-3 rounded hover:bg-blue-50 text-gray-600"><i class="fas fa-edit w-5"></i> Enter Marks</button></li>
                     <li><button onclick="showSection('reportsSection')" class="nav-btn w-full text-left px-4 py-3 rounded hover:bg-blue-50 text-gray-600"><i class="fas fa-file-alt w-5"></i> Reports & Sheets</button></li>
@@ -329,13 +369,13 @@
                 <div class="bg-white p-4 rounded-lg shadow-sm mb-6">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                         <div><label class="block text-sm font-bold text-gray-700 mb-1">Select Class</label><select id="reportClassSelect" class="w-full border p-2 rounded"></select></div>
-                        <div><label class="block text-sm font-bold text-gray-700 mb-1">Select Exam (For Mark Sheet)</label><select id="reportExamSelect" class="w-full border p-2 rounded"></select></div>
+                        <div><label class="block text-sm font-bold text-gray-700 mb-1">Select Exam <span class="text-gray-400 font-normal">(Required for Sheets/Certificates)</span></label><select id="reportExamSelect" class="w-full border p-2 rounded"></select></div>
                     </div>
                     <div class="flex flex-wrap gap-2 border-t pt-4">
                         <button onclick="generatePreview('report')" class="bg-primary text-white px-3 py-2 rounded hover:bg-blue-800 text-sm font-medium"><i class="fas fa-id-card"></i> Progress Cards</button>
                         <button onclick="generatePreview('certificate')" class="bg-purple-600 text-white px-3 py-2 rounded hover:bg-purple-800 text-sm font-medium"><i class="fas fa-certificate"></i> Certificates</button>
                         <button onclick="generateMarkSheet()" class="bg-teal-600 text-white px-3 py-2 rounded hover:bg-teal-800 text-sm font-medium"><i class="fas fa-table"></i> Class Mark Sheet</button>
-                        <button onclick="window.print()" class="ml-auto bg-gray-800 text-white px-4 py-2 rounded hover:bg-black text-sm font-medium"><i class="fas fa-print"></i> Print / PDF</button>
+                        <button onclick="printReport()" class="ml-auto bg-gray-800 text-white px-4 py-2 rounded hover:bg-black text-sm font-medium"><i class="fas fa-print"></i> Print / PDF</button>
                     </div>
                 </div>
                 <div class="flex justify-center bg-gray-200 p-4 overflow-auto border rounded-lg h-[500px]"><div id="previewArea" class="w-full flex flex-col items-center space-y-8"><div class="text-center text-gray-400 p-10 bg-white shadow w-full max-w-md rounded mt-10">Select options above and click Generate.</div></div></div>
@@ -359,7 +399,7 @@
                     <div class="flex justify-end"><button onclick="generateAdmitCards()" class="bg-blue-800 text-white px-8 py-3 rounded font-bold shadow hover:bg-blue-900"><i class="fas fa-id-card"></i> Generate & Preview</button></div>
                 </div>
                 <div class="mt-8 flex justify-center bg-gray-200 p-4 overflow-auto hidden" id="admitPreviewWrapper"><div id="admitPreviewArea"></div></div>
-                <div class="text-center mt-4 hidden" id="admitPrintBtn"><button onclick="window.print()" class="bg-gray-800 text-white px-6 py-3 rounded shadow hover:bg-black"><i class="fas fa-print"></i> Print Admit Cards</button></div>
+                <div class="text-center mt-4 hidden" id="admitPrintBtn"><button onclick="printReport()" class="bg-gray-800 text-white px-6 py-3 rounded shadow hover:bg-black"><i class="fas fa-print"></i> Print Admit Cards</button></div>
             </div>
         </main>
     </div>
@@ -632,6 +672,11 @@
         window.saveMarks=()=>{const ci=document.getElementById('markClassSelect').selectedIndex-1;const ei=document.getElementById('markExamSelect').selectedIndex-1;const en=db.exams[ei].name;document.querySelectorAll('.mark-input').forEach(i=>{const si=i.dataset.si,sub=i.dataset.sub;if(!db.classes[ci].students[si].marks[en])db.classes[ci].students[si].marks[en]={};if(i.value!=='')db.classes[ci].students[si].marks[en][sub]=parseFloat(i.value);});saveData();};
         window.populateDropdowns=()=>{const cOpt=`<option value="">-- Select --</option>`+db.classes.map((c,i)=>`<option value="${i}">${c.name}</option>`).join('');['studentClassSelect','markClassSelect','reportClassSelect','configClassSelect','admitClassSelect','rankClassSelect'].forEach(id=>{if(document.getElementById(id))document.getElementById(id).innerHTML=cOpt});const eOpt=`<option value="">-- Select --</option>`+db.exams.map((e,i)=>`<option value="${i}">${e.name}</option>`).join('');document.getElementById('markExamSelect').innerHTML=eOpt;if(document.getElementById('reportExamSelect'))document.getElementById('reportExamSelect').innerHTML=eOpt;};
         
+        window.getGrade = (pct) => {
+            if(pct>=90) return 'A+'; if(pct>=80) return 'A'; if(pct>=70) return 'B+';
+            if(pct>=60) return 'B'; if(pct>=50) return 'C'; if(pct>=40) return 'D'; return 'F';
+        };
+
         // --- ADMIT CARD GENERATOR (Updated with Address & Routine) ---
         window.generateAdmitCards = () => {
             const ci = document.getElementById('admitClassSelect').selectedIndex - 1;
@@ -641,6 +686,9 @@
             if(ci < 0 || !examName) return alert("Select Class and Enter Exam Name.");
             const cls = db.classes[ci];
             if(cls.students.length === 0) return alert("No students.");
+
+            // Set Portrait Mode for Admit Cards
+            setPrintOrientation('portrait');
 
             // Build Routine Table HTML for this class
             let routineHtml = '';
@@ -689,64 +737,153 @@
             document.getElementById('admitPrintBtn').classList.remove('hidden');
         };
 
-        // --- BULK REPORTS (Updated with Address) ---
+        // --- BULK REPORTS (UPDATED - CUMULATIVE & COLUMNS) ---
         window.generatePreview = (type) => {
-            const ci = document.getElementById('reportClassSelect').selectedIndex - 1;
-            if(ci < 0) return alert("Select Class");
-            const cls = db.classes[ci];
-            let allContent = '';
-            let chartDataList = [];
+            try {
+                const ci = document.getElementById('reportClassSelect').selectedIndex - 1;
+                if(ci < 0) return alert("Select Class");
+                const cls = db.classes[ci];
+                
+                // Fix: Add check for Exams
+                if(type === 'report' && (!db.exams || db.exams.length === 0)) return alert("Please define at least one Exam in Result Config before generating Progress Cards.");
 
-            cls.students.forEach((s, idx) => {
-                const addressBlock = db.schoolAddress ? `<p class="text-sm text-gray-600">${db.schoolAddress}</p>` : '';
-                if (type === 'report') {
-                    let chartId = `reportChart_${idx}`;
-                    allContent += `<div class="a4-paper"><div class="text-center border-b-2 border-gray-800 pb-4 mb-6"><h1 class="text-4xl font-bold uppercase text-blue-900">${db.schoolName}</h1>${addressBlock}<p class="text-gray-600 mt-1 font-semibold uppercase tracking-widest">Progress Report</p></div><div class="grid grid-cols-2 gap-4 text-sm mb-6"><div>Name: <b>${s.name}</b></div><div>Class: <b>${cls.name}</b></div><div>Father: <b>${s.father}</b></div><div>Roll: <b>${s.roll}</b> | ID: <b>${s.id}</b></div></div><table class="w-full border-collapse border border-gray-400 text-sm mb-6"><thead><tr class="bg-gray-100"><th class="border border-gray-400 p-2">Subject</th>` + db.exams.map(e => `<th class="border border-gray-400 p-2">${e.name}</th>`).join('') + `<th class="border border-gray-400 p-2">Total</th><th class="border border-gray-400 p-2">Grade</th></tr></thead><tbody>`;
-                    
-                    let labels = [], data = [];
-                    cls.subjects.forEach(sub => {
-                        let subTotal = 0, maxTotal = 0;
-                        let row = `<tr><td class="border border-gray-400 p-2 font-bold">${sub}</td>`;
-                        db.exams.forEach(e => {
-                            const obt = (s.marks[e.name] && s.marks[e.name][sub]) !== undefined ? s.marks[e.name][sub] : '-';
-                            const max = (cls.marksConfig && cls.marksConfig[e.name] && cls.marksConfig[e.name][sub]) || 100;
-                            row += `<td class="border border-gray-400 p-2 text-center">${obt} <span class="text-xs text-gray-500">/${max}</span></td>`;
-                            if(obt !== '-') { subTotal += obt; maxTotal += max; }
-                        });
-                        const pct = maxTotal > 0 ? (subTotal/maxTotal)*100 : 0;
-                        row += `<td class="border border-gray-400 p-2 text-center font-bold">${subTotal} / ${maxTotal}</td><td class="border border-gray-400 p-2 text-center">${getGrade(pct)}</td></tr>`;
-                        allContent += row;
-                    });
-                    
-                    db.exams.forEach(e => {
-                        let totalObt = 0, totalMax = 0;
-                        cls.subjects.forEach(sub => {
-                            const obt = (s.marks[e.name] && s.marks[e.name][sub]) || 0;
-                            const max = (cls.marksConfig && cls.marksConfig[e.name] && cls.marksConfig[e.name][sub]) || 100;
-                            totalObt += obt; totalMax += max;
-                        });
-                        if(totalMax > 0) { labels.push(e.name); data.push((totalObt/totalMax)*100); }
-                    });
-                    if(labels.length > 0) { chartDataList.push({ id: chartId, labels: labels, data: data }); }
-                    
-                    allContent += `</tbody></table><div class="h-64 mb-6"><canvas id="${chartId}"></canvas></div><div class="flex justify-between text-sm pt-8 mt-8"><div class="text-center w-1/4 border-t border-gray-400 pt-2">Class Teacher</div><div class="text-center w-1/4 border-t border-gray-400 pt-2">Principal</div><div class="text-center w-1/4 border-t border-gray-400 pt-2">Parent</div></div></div>`;
-                } else {
-                    allContent += `<div class="a4-paper flex flex-col justify-center items-center text-center border-8 border-double border-blue-900 p-10"><i class="fas fa-award text-6xl text-yellow-500 mb-6"></i><h1 class="text-5xl font-serif font-bold text-blue-900 mb-2">Certificate of Merit</h1>${addressBlock}<p class="text-lg text-gray-600 mb-10 mt-4">This certifies that</p><h2 class="text-4xl font-bold border-b-2 border-gray-300 pb-2 px-10 mb-4">${s.name}</h2><p class="text-lg text-gray-700 mb-8">Son/Daughter of <b>${s.father}</b><br>Class: <b>${cls.name}</b> | Student ID: <b>${s.id}</b></p><p class="max-w-2xl text-gray-600 leading-relaxed mb-12">Has successfully completed the academic requirements for the year.</p><div class="flex justify-between w-full px-10 mt-auto mb-10"><div class="text-center"><div class="w-40 border-b border-gray-800 mb-2"></div><div class="font-bold">Date</div></div><div class="text-center"><div class="w-40 border-b border-gray-800 mb-2"></div><div class="font-bold">Principal</div></div></div></div>`;
+                // FIX: Check for subjects
+                const subjects = cls.subjects || [];
+                if (type === 'report' && subjects.length === 0) {
+                    return alert(`No subjects defined for class '${cls.name}'. Please go to 'Result Config' -> 'Define Subjects' first.`);
                 }
-            });
-            document.getElementById('previewArea').innerHTML = allContent;
-            document.getElementById('printContainer').innerHTML = allContent;
-            
-            setTimeout(() => {
-                chartDataList.forEach(item => {
-                    const ctx = document.getElementById(item.id);
-                    if (ctx) new Chart(ctx, { type: 'bar', data: { labels: item.labels, datasets: [{ label: 'Overall %', data: item.data, backgroundColor: '#3b82f6' }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } } });
-                    const printC = document.getElementById('printContainer');
-                    printC.innerHTML = printC.innerHTML.replace(new RegExp(item.id, 'g'), 'print_' + item.id);
-                    const ctxP = document.getElementById('print_' + item.id);
-                    if(ctxP) new Chart(ctxP, { type: 'bar', data: { labels: item.labels, datasets: [{ label: 'Overall %', data: item.data, backgroundColor: '#3b82f6' }] }, options: { responsive: true, maintainAspectRatio: false, animation: false, scales: { y: { beginAtZero: true, max: 100 } } } });
+
+                let allContent = '';
+                let chartDataList = [];
+
+                // Set Landscape Mode
+                setPrintOrientation('landscape');
+
+                cls.students.forEach((s, idx) => {
+                    const addressBlock = db.schoolAddress ? `<p class="text-sm text-gray-600">${db.schoolAddress}</p>` : '';
+                    if (type === 'report') {
+                        // Use landscape class for wrapper
+                        let chartId = `reportChart_${idx}`;
+                        allContent += `<div class="a4-paper a4-landscape"><div class="text-center border-b-2 border-gray-800 pb-4 mb-6"><h1 class="text-4xl font-bold uppercase text-blue-900">${db.schoolName}</h1>${addressBlock}<p class="text-gray-600 mt-1 font-semibold uppercase tracking-widest">Progress Report</p></div><div class="grid grid-cols-2 gap-4 text-sm mb-6"><div>Name: <b>${s.name}</b></div><div>Class: <b>${cls.name}</b></div><div>Father: <b>${s.father}</b></div><div>Roll: <b>${s.roll}</b> | ID: <b>${s.id}</b></div></div><table class="w-full border-collapse border border-gray-400 text-xs mb-6 text-center"><thead><tr class="bg-gray-100"><th class="border border-gray-400 p-2 text-left">Subject</th>`;
+                        
+                        // HEADER GENERATION: Loop through all exams
+                        db.exams.forEach(e => {
+                            allContent += `<th class="border border-gray-400 p-1" colspan="2">${e.name}</th>`;
+                        });
+                        
+                        allContent += `<th class="border border-gray-400 p-2 bg-blue-50" colspan="2">Grand Total</th><th class="border border-gray-400 p-2 bg-blue-50">Grade</th></tr>`;
+                        
+                        // SUB-HEADER ROW
+                        allContent += `<tr class="bg-gray-50"><th class="border border-gray-400 p-1"></th>`;
+                        db.exams.forEach(e => {
+                            allContent += `<th class="border border-gray-400 p-1 text-[10px]">Max</th><th class="border border-gray-400 p-1 text-[10px]">Obt</th>`;
+                        });
+                        allContent += `<th class="border border-gray-400 p-1 text-[10px] bg-blue-50">Max</th><th class="border border-gray-400 p-1 text-[10px] bg-blue-50">Obt</th><th class="border border-gray-400 p-1 bg-blue-50"></th></tr></thead><tbody>`;
+
+                        let labels = [], data = [];
+                        let sessionTotalMax = 0;
+                        let sessionTotalObt = 0;
+
+                        subjects.forEach(sub => {
+                            let rowSubTotalMax = 0;
+                            let rowSubTotalObt = 0;
+                            
+                            let row = `<tr><td class="border border-gray-400 p-2 font-bold text-left">${sub}</td>`;
+                            
+                            // COLUMNS PER EXAM
+                            db.exams.forEach(e => {
+                                // SAFE ACCESS TO MARKS using Optional Chaining and Logical AND
+                                const obt = (s.marks && s.marks[e.name] && s.marks[e.name][sub] !== undefined) ? s.marks[e.name][sub] : '-';
+                                
+                                // SAFE ACCESS TO MAX MARKS
+                                const max = (cls.marksConfig && cls.marksConfig[e.name] && cls.marksConfig[e.name][sub]) || 100;
+                                
+                                // Only add to totals if marks exist (not absent/empty)
+                                if(obt !== '-') {
+                                    rowSubTotalObt += obt;
+                                    rowSubTotalMax += max;
+                                }
+                                
+                                row += `<td class="border border-gray-400 p-1">${max}</td><td class="border border-gray-400 p-1 font-semibold">${obt}</td>`;
+                            });
+
+                            // ROW SUMMARY (Subject Total)
+                            const pct = rowSubTotalMax > 0 ? (rowSubTotalObt/rowSubTotalMax)*100 : 0;
+                            const grade = rowSubTotalMax > 0 ? window.getGrade(pct) : '-';
+                            
+                            sessionTotalMax += rowSubTotalMax;
+                            sessionTotalObt += rowSubTotalObt;
+
+                            row += `<td class="border border-gray-400 p-1 font-bold bg-blue-50">${rowSubTotalMax > 0 ? rowSubTotalMax : '-'}</td>
+                                    <td class="border border-gray-400 p-1 font-bold bg-blue-50">${rowSubTotalMax > 0 ? rowSubTotalObt : '-'}</td>
+                                    <td class="border border-gray-400 p-1 font-bold bg-blue-50">${grade}</td></tr>`;
+                            allContent += row;
+                        });
+                        
+                        // SESSION SUMMARY FOOTER
+                        const overallPct = sessionTotalMax > 0 ? (sessionTotalObt/sessionTotalMax)*100 : 0;
+                        const overallGrade = sessionTotalMax > 0 ? window.getGrade(overallPct) : '-';
+
+                        allContent += `</tbody></table>
+                        
+                        <div class="border border-gray-400 p-4 rounded bg-gray-50 mb-6">
+                            <h3 class="font-bold border-b border-gray-300 pb-2 mb-2 text-center uppercase tracking-wide">Session Performance Summary</h3>
+                            <div class="flex justify-around text-sm">
+                                <div class="text-center">
+                                    <div class="text-gray-500 text-xs uppercase">Total Exam Marks</div>
+                                    <div class="font-bold text-lg">${sessionTotalMax}</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-gray-500 text-xs uppercase">Total Obtained</div>
+                                    <div class="font-bold text-lg text-blue-700">${sessionTotalObt}</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-gray-500 text-xs uppercase">Percentage</div>
+                                    <div class="font-bold text-lg">${overallPct.toFixed(2)}%</div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-gray-500 text-xs uppercase">Overall Grade</div>
+                                    <div class="font-bold text-2xl text-green-600">${overallGrade}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex justify-between text-sm pt-8 mt-8"><div class="text-center w-1/4 border-t border-gray-400 pt-2">Class Teacher</div><div class="text-center w-1/4 border-t border-gray-400 pt-2">Principal</div><div class="text-center w-1/4 border-t border-gray-400 pt-2">Parent</div></div></div>`;
+                    } else {
+                        // Check for selected exam name for certificate
+                        const ei = document.getElementById('reportExamSelect').selectedIndex - 1;
+                        const selectedExamName = (ei >= 0 && db.exams[ei]) ? " - " + db.exams[ei].name : "";
+                        
+                        allContent += `<div class="a4-paper a4-landscape flex flex-col justify-center items-center text-center border-8 border-double border-blue-900 p-10"><i class="fas fa-award text-6xl text-yellow-500 mb-6"></i><h1 class="text-5xl font-serif font-bold text-blue-900 mb-2">Certificate of Merit${selectedExamName}</h1>${addressBlock}<p class="text-lg text-gray-600 mb-10 mt-4">This certifies that</p><h2 class="text-4xl font-bold border-b-2 border-gray-300 pb-2 px-10 mb-4">${s.name}</h2><p class="text-lg text-gray-700 mb-8">Son/Daughter of <b>${s.father}</b><br>Class: <b>${cls.name}</b> | Student ID: <b>${s.id}</b></p><p class="max-w-2xl text-gray-600 leading-relaxed mb-12">Has successfully completed the academic requirements for the year.</p><div class="flex justify-between w-full px-10 mt-auto mb-10"><div class="text-center"><div class="w-40 border-b border-gray-800 mb-2"></div><div class="font-bold">Date</div></div><div class="text-center"><div class="w-40 border-b border-gray-800 mb-2"></div><div class="font-bold">Principal</div></div></div></div>`;
+                    }
                 });
-            }, 500);
+                document.getElementById('previewArea').innerHTML = allContent;
+                document.getElementById('printContainer').innerHTML = allContent;
+                
+                setTimeout(() => {
+                    chartDataList.forEach(item => {
+                        const ctx = document.getElementById(item.id);
+                        if (ctx) new Chart(ctx, { type: 'bar', data: { labels: item.labels, datasets: [{ label: 'Overall %', data: item.data, backgroundColor: '#3b82f6' }] }, options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, max: 100 } } } });
+                        const printC = document.getElementById('printContainer');
+                        printC.innerHTML = printC.innerHTML.replace(new RegExp(item.id, 'g'), 'print_' + item.id);
+                        const ctxP = document.getElementById('print_' + item.id);
+                        if(ctxP) new Chart(ctxP, { type: 'bar', data: { labels: item.labels, datasets: [{ label: 'Overall %', data: item.data, backgroundColor: '#3b82f6' }] }, options: { responsive: true, maintainAspectRatio: false, animation: false, scales: { y: { beginAtZero: true, max: 100 } } } });
+                    });
+                }, 500);
+            } catch(e) {
+                console.error(e);
+                alert("An error occurred while generating reports. Please check if all subjects and exams are configured correctly for this class.");
+            }
+        };
+
+        window.printReport = () => {
+            window.print();
+            // Cleanup landscape style after print dialog closes (approximate)
+            setTimeout(() => {
+                document.body.classList.remove('landscape-mode');
+                const style = document.getElementById('pageStyle');
+                if(style) style.remove();
+            }, 1000);
         };
 
         // --- MARK SHEET (Updated with Address) ---
@@ -758,13 +895,18 @@
             const exam = db.exams[ei];
             const addressBlock = db.schoolAddress ? `<p class="text-sm text-gray-600">${db.schoolAddress}</p>` : '';
             
-            let html = `<div class="a4-paper"><div class="text-center border-b-2 border-gray-800 pb-2 mb-4"><h1 class="text-2xl font-bold uppercase">${db.schoolName}</h1>${addressBlock}<p class="text-sm text-gray-600 mt-1">Class Mark Sheet | Exam: ${exam.name} | Class: ${cls.name}</p></div><table class="w-full text-xs border-collapse border border-gray-400 text-center"><thead><tr class="bg-gray-200 font-bold"><th class="border border-gray-400 p-1">Roll</th><th class="border border-gray-400 p-1 text-left">Name</th>` + cls.subjects.map(s=>`<th class="border border-gray-400 p-1">${s}</th>`).join('') + `<th class="border border-gray-400 p-1">Total</th><th class="border border-gray-400 p-1">%</th><th class="border border-gray-400 p-1">Rank</th></tr></thead><tbody>`;
+            // Ensure Portrait Mode
+            document.body.classList.remove('landscape-mode');
+            const style = document.getElementById('pageStyle');
+            if(style) style.remove();
+
+            let html = `<div class="a4-paper"><div class="text-center border-b-2 border-gray-800 pb-2 mb-4"><h1 class="text-2xl font-bold uppercase">${db.schoolName}</h1>${addressBlock}<p class="text-sm text-gray-600 mt-1">Class Mark Sheet | Exam: ${exam.name} | Class: ${cls.name}</p></div><table class="w-full text-xs border-collapse border border-gray-400 text-center"><thead><tr class="bg-gray-200 font-bold"><th class="border border-gray-400 p-1">Roll</th><th class="border border-gray-400 p-1 text-left">Name</th>` + (cls.subjects || []).map(s=>`<th class="border border-gray-400 p-1">${s}</th>`).join('') + `<th class="border border-gray-400 p-1">Total</th><th class="border border-gray-400 p-1">%</th><th class="border border-gray-400 p-1">Rank</th></tr></thead><tbody>`;
             
             let studentsWithScores = cls.students.map(s => {
                 let totalObt = 0;
                 let totalMax = 0;
-                cls.subjects.forEach(sub => {
-                    const obt = (s.marks[exam.name] && s.marks[exam.name][sub]) || 0;
+                (cls.subjects || []).forEach(sub => {
+                    const obt = (s.marks && s.marks[exam.name] && s.marks[exam.name][sub]) || 0;
                     const max = (cls.marksConfig && cls.marksConfig[exam.name] && cls.marksConfig[exam.name][sub]) || 100;
                     totalObt += obt;
                     totalMax += max;
@@ -773,7 +915,7 @@
             }).sort((a, b) => b.totalObt - a.totalObt);
             
             studentsWithScores.forEach((s, idx) => {
-                html += `<tr><td class="border border-gray-400 p-1">${s.roll}</td><td class="border border-gray-400 p-1 text-left">${s.name}</td>` + cls.subjects.map(sub=>`<td class="border border-gray-400 p-1">${(s.marks[exam.name]&&s.marks[exam.name][sub])!==undefined?s.marks[exam.name][sub]:'-'}</td>`).join('') + `<td class="border border-gray-400 p-1 font-bold">${s.totalObt}</td><td class="border border-gray-400 p-1">${s.pct.toFixed(1)}%</td><td class="border border-gray-400 p-1 font-bold">#${idx+1}</td></tr>`;
+                html += `<tr><td class="border border-gray-400 p-1">${s.roll}</td><td class="border border-gray-400 p-1 text-left">${s.name}</td>` + (cls.subjects || []).map(sub=>`<td class="border border-gray-400 p-1">${(s.marks && s.marks[exam.name] && s.marks[exam.name][sub])!==undefined?s.marks[exam.name][sub]:'-'}</td>`).join('') + `<td class="border border-gray-400 p-1 font-bold">${s.totalObt}</td><td class="border border-gray-400 p-1">${s.pct.toFixed(1)}%</td><td class="border border-gray-400 p-1 font-bold">#${idx+1}</td></tr>`;
             });
             html += `</tbody></table><div class="flex justify-between w-full mt-10 px-10"><div class="text-center"><div class="w-32 border-t border-gray-800 mb-1"></div><div class="text-xs">Teacher</div></div><div class="text-center"><div class="w-32 border-t border-gray-800 mb-1"></div><div class="text-xs">Principal</div></div></div></div>`;
             document.getElementById('previewArea').innerHTML=html;
@@ -785,12 +927,16 @@
             if(ci < 0) return alert("Select Class");
             const cls = db.classes[ci];
             const addressBlock = db.schoolAddress ? `<p class="text-sm text-gray-600">${db.schoolAddress}</p>` : '';
+            
+            // Portrait is usually fine for rank list, but let's stick to Portrait
+            setPrintOrientation('portrait');
+
             let rankedList = cls.students.map(s => {
                 let grandTotalObt = 0;
                 let grandTotalMax = 0;
                 db.exams.forEach(exam => {
                     (cls.subjects || []).forEach(sub => {
-                         const obt = (s.marks[exam.name] && s.marks[exam.name][sub]) || 0;
+                         const obt = (s.marks && s.marks[exam.name] && s.marks[exam.name][sub]) || 0;
                          const max = (cls.marksConfig && cls.marksConfig[exam.name] && cls.marksConfig[exam.name][sub]) || 100;
                          grandTotalObt += obt; grandTotalMax += max;
                     });
@@ -813,8 +959,23 @@
             document.getElementById('printContainer').innerHTML=html;
             document.getElementById('printRankBtn').classList.remove('hidden');
         };
+
+        // --- Helper for Print Orientation ---
+        function setPrintOrientation(mode) {
+            const existingStyle = document.getElementById('print-orientation-style');
+            if(existingStyle) existingStyle.remove();
+            
+            const style = document.createElement('style');
+            style.id = 'print-orientation-style';
+            style.innerHTML = `@page { size: ${mode}; }`;
+            document.head.appendChild(style);
+            
+            if(mode === 'landscape') {
+                document.body.classList.add('landscape-mode');
+            } else {
+                document.body.classList.remove('landscape-mode');
+            }
+        }
     </script>
 </body>
 </html>
-
-
